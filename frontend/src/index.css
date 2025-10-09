@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.typed>span {
+  transition: opacity 1s ease-in-out;
+}
+
+body {
+  @apply dark:bg-black dark:text-white text-sm scroll-smooth;
+}
