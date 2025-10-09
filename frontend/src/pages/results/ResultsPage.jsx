@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Download, AlertTriangle, Trophy, FileText, BarChart3 } from 'lucide-react';
+import { Download, AlertTriangle, BarChart3 } from 'lucide-react';
 
 const ResultsPage = () => {
     const [selectedRank, setSelectedRank] = useState('');

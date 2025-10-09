@@ -75,6 +75,7 @@ const ImageUploadPage = () => {
                             accept="image/*"
                             onChange={handleFileUpload}
                             className="hidden"
+                            max={10}
                         />
                     </div>
 

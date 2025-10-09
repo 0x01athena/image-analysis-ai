@@ -2,9 +2,9 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navigation from './components/Navigation';
 import LandingPage from './pages/landing/LandingPage';
-import ImageUploadPage from './pages/main/image-upload/ImageUploadPage';
-import BatchProcessingPage from './pages/main/batch-processing/BatchProcessingPage';
-import ResultsPage from './pages/main/results/ResultsPage';
+import ImageUploadPage from './pages/image-upload/ImageUploadPage';
+import BatchProcessingPage from './pages/batch-processing/BatchProcessingPage';
+import ResultsPage from './pages/results/ResultsPage';
 import "./App.css";
 
 function App() {
