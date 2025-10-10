@@ -121,6 +121,7 @@ frontend/.cache/
 # Backend specific
 backend/dist/
 backend/build/
+backend/uploads/
 backend/.env
 backend/.env.local
 backend/.env.development.local

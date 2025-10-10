@@ -16,14 +16,13 @@ const LandingPage = () => {
                 >
                     <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6">
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                            AI出品タイトル生成
+                            人工生成AIにて出品タイトル作成
                         </span>
                     </h1>
                     <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-                        高度なAI技術で商品画像から詳細な情報を抽出し、魅力的なタイトルを自動生成します。
-                        データ抽出からワークフロー最適化まで、すべてを効率化します。
+                        株式会社PLAYER
                     </p>
-                    <Link to="/image-upload">
+                    <Link to="/settings">
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}

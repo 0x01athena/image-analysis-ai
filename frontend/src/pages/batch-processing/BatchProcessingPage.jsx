@@ -1,22 +1,113 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, FolderOpen, AlertTriangle, Trophy, Play } from 'lucide-react';
+import { FileText, FolderOpen, AlertTriangle, Trophy, Play, Upload, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 const BatchProcessingPage = () => {
     const [directoryPath, setDirectoryPath] = useState('');
+    const [selectedFiles, setSelectedFiles] = useState([]);
+    const [isUploading, setIsUploading] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [processingStatus, setProcessingStatus] = useState(null);
+    const [processingResults, setProcessingResults] = useState(null);
+    const fileInputRef = useRef(null);
 
     const handleDirectorySelect = () => {
-        // This would typically open a directory picker
-        // For now, we'll just show an alert
-        alert('ディレクトリ選択機能は実装予定です');
+        fileInputRef.current?.click();
     };
 
-    const handleStartBatchProcessing = () => {
-        if (!directoryPath.trim()) {
-            alert('画像ディレクトリパスを入力してください');
+    const handleFileSelection = (event) => {
+        const files = Array.from(event.target.files);
+        setSelectedFiles(files);
+
+        // Extract directory path from first file
+        if (files.length > 0) {
+            const firstFile = files[0];
+            const pathParts = firstFile.webkitRelativePath?.split('/') || [];
+            if (pathParts.length > 1) {
+                setDirectoryPath(pathParts[0]);
+            }
+        }
+    };
+
+    const handleStartBatchProcessing = async () => {
+        if (selectedFiles.length === 0) {
+            alert('画像ファイルを選択してください');
             return;
         }
-        alert('バッチ処理を開始します');
+
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        try {
+            // Create FormData for file upload
+            const formData = new FormData();
+            selectedFiles.forEach(file => {
+                formData.append('images', file);
+            });
+
+            // Upload images
+            const uploadResponse = await fetch('http://162.43.19.70/api/batch/upload-directory', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!uploadResponse.ok) {
+                throw new Error('Upload failed');
+            }
+
+            const uploadResult = await uploadResponse.json();
+            console.log('Upload result:', uploadResult);
+
+            setIsUploading(false);
+            setIsProcessing(true);
+
+            // Start batch processing
+            const processingResponse = await fetch('http://162.43.19.70/api/batch/start-processing', {
+                method: 'POST'
+            });
+
+            if (!processingResponse.ok) {
+                throw new Error('Processing start failed');
+            }
+
+            const processingResult = await processingResponse.json();
+            console.log('Processing started:', processingResult);
+
+            // Start polling for status updates
+            pollProcessingStatus();
+
+        } catch (error) {
+            console.error('Error starting batch processing:', error);
+            alert('バッチ処理の開始に失敗しました: ' + error.message);
+            setIsUploading(false);
+            setIsProcessing(false);
+        }
+    };
+
+    const pollProcessingStatus = async () => {
+        const pollInterval = setInterval(async () => {
+            try {
+                const response = await fetch('http://162.43.19.70/api/batch/status');
+                const status = await response.json();
+
+                setProcessingStatus(status.data);
+
+                if (!status.data.isProcessing) {
+                    clearInterval(pollInterval);
+                    setIsProcessing(false);
+
+                    // Get final results
+                    const resultsResponse = await fetch('http://162.43.19.70/api/batch/results');
+                    const results = await resultsResponse.json();
+                    setProcessingResults(results.data);
+                }
+            } catch (error) {
+                console.error('Error polling status:', error);
+                clearInterval(pollInterval);
+                setIsProcessing(false);
+            }
+        }, 2000);
     };
 
     return (
@@ -69,28 +160,54 @@ const BatchProcessingPage = () => {
                         </ol>
                     </div>
 
-                    {/* Image Directory Path Section */}
+                    {/* Image Directory Selection Section */}
                     <div className="mb-8">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">画像ディレクトリパス</h2>
-                        <p className="text-sm text-gray-600 mb-2">例: /path/to/images</p>
-                        <div className="flex gap-3 mb-3">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">画像ディレクトリ選択</h2>
+                        <p className="text-sm text-gray-600 mb-2">商品画像が保存されているフォルダを選択してください</p>
+                        <p className="text-sm text-gray-600 mb-4">ファイル名形式: xxxxxx_1.jpg, xxxxxx_2.jpg, yyyyyyyy_1.jpg, yyyyyyyy_2.jpg...</p>
+
+                        <div className="flex gap-3 mb-4">
                             <input
                                 type="text"
                                 value={directoryPath}
                                 onChange={(e) => setDirectoryPath(e.target.value)}
-                                placeholder="画像ディレクトリのパスを入力してください"
+                                placeholder="選択されたディレクトリ名"
                                 className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                readOnly
                             />
                             <button
                                 onClick={handleDirectorySelect}
                                 className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center gap-2"
                             >
                                 <FolderOpen className="w-4 h-4" />
-                                ディレクトリを選択
+                                フォルダを選択
                             </button>
                         </div>
-                        <p className="text-sm text-gray-600 mb-2">処理したい商品画像を含むディレクトリを選択または入力してください</p>
-                        <p className="text-xs text-gray-500">※サーバー上のパスを入力するか、プラウザからディレクトリを選択できます</p>
+
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={handleFileSelection}
+                            className="hidden"
+                            webkitdirectory=""
+                        />
+
+                        {selectedFiles.length > 0 && (
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <CheckCircle className="w-5 h-5 text-green-600" />
+                                    <span className="font-semibold text-green-800">選択されたファイル</span>
+                                </div>
+                                <p className="text-sm text-green-700">
+                                    総ファイル数: {selectedFiles.length}個
+                                </p>
+                                <p className="text-sm text-green-700">
+                                    ディレクトリ: {directoryPath}
+                                </p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Processing Information Section */}
@@ -136,14 +253,132 @@ const BatchProcessingPage = () => {
                         </div>
                     </div>
 
+                    {/* Processing Status Section */}
+                    {(isUploading || isProcessing || processingStatus) && (
+                        <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-center gap-3 mb-4">
+                                <Clock className="w-5 h-5 text-blue-600" />
+                                <h2 className="text-lg font-semibold text-gray-900">処理状況</h2>
+                            </div>
+
+                            {isUploading && (
+                                <div className="text-center">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                                    <p className="text-blue-700">画像をアップロード中...</p>
+                                </div>
+                            )}
+
+                            {isProcessing && processingStatus && (
+                                <div>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-sm text-blue-700">進行状況</span>
+                                        <span className="text-sm text-blue-700">
+                                            {processingStatus.processedProducts + processingStatus.failedProducts} / {processingStatus.totalProducts}
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+                                        <div
+                                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                            style={{
+                                                width: `${((processingStatus.processedProducts + processingStatus.failedProducts) / processingStatus.totalProducts) * 100}%`
+                                            }}
+                                        ></div>
+                                    </div>
+
+                                    {processingStatus.currentProduct && (
+                                        <p className="text-sm text-blue-700">
+                                            現在処理中: {processingStatus.currentProduct}
+                                        </p>
+                                    )}
+
+                                    <div className="grid grid-cols-3 gap-4 mt-4 text-sm">
+                                        <div className="text-center">
+                                            <div className="font-semibold text-green-600">{processingStatus.processedProducts}</div>
+                                            <div className="text-gray-600">成功</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="font-semibold text-red-600">{processingStatus.failedProducts}</div>
+                                            <div className="text-gray-600">失敗</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="font-semibold text-gray-600">
+                                                {processingStatus.totalProducts - processingStatus.processedProducts - processingStatus.failedProducts}
+                                            </div>
+                                            <div className="text-gray-600">残り</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {!isProcessing && processingStatus && !processingStatus.isProcessing && (
+                                <div className="text-center">
+                                    <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                                    <p className="text-green-700 font-semibold">処理完了!</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Processing Results Section */}
+                    {processingResults && (
+                        <div className="mb-8 p-6 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center gap-3 mb-4">
+                                <Trophy className="w-5 h-5 text-green-600" />
+                                <h2 className="text-lg font-semibold text-gray-900">処理結果</h2>
+                            </div>
+
+                            <div className="grid md:grid-cols-3 gap-4 mb-6">
+                                <div className="text-center p-4 bg-white rounded-lg">
+                                    <div className="text-2xl font-bold text-green-600">{processingResults.summary.rankA}</div>
+                                    <div className="text-sm text-gray-600">ランクA</div>
+                                </div>
+                                <div className="text-center p-4 bg-white rounded-lg">
+                                    <div className="text-2xl font-bold text-orange-600">{processingResults.summary.rankB}</div>
+                                    <div className="text-sm text-gray-600">ランクB</div>
+                                </div>
+                                <div className="text-center p-4 bg-white rounded-lg">
+                                    <div className="text-2xl font-bold text-red-600">{processingResults.summary.rankC}</div>
+                                    <div className="text-sm text-gray-600">ランクC</div>
+                                </div>
+                            </div>
+
+                            <div className="text-center">
+                                <p className="text-sm text-gray-600 mb-2">
+                                    総処理数: {processingResults.summary.total}件
+                                </p>
+                                <button className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors duration-300">
+                                    結果をCSVでダウンロード
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Start Batch Processing Button */}
                     <div className="text-center">
                         <button
                             onClick={handleStartBatchProcessing}
-                            className="bg-purple-600 text-white px-12 py-4 rounded-xl text-lg font-semibold shadow-lg hover:bg-purple-700 hover:shadow-xl transition-all duration-300 flex items-center gap-3 mx-auto"
+                            disabled={selectedFiles.length === 0 || isUploading || isProcessing}
+                            className={`px-12 py-4 rounded-xl text-lg font-semibold shadow-lg transition-all duration-300 flex items-center gap-3 mx-auto ${selectedFiles.length === 0 || isUploading || isProcessing
+                                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                    : 'bg-purple-600 text-white hover:bg-purple-700 hover:shadow-xl'
+                                }`}
                         >
-                            <Play className="w-5 h-5" />
-                            バッチ処理を開始
+                            {isUploading ? (
+                                <>
+                                    <Upload className="w-5 h-5" />
+                                    アップロード中...
+                                </>
+                            ) : isProcessing ? (
+                                <>
+                                    <Clock className="w-5 h-5" />
+                                    処理中...
+                                </>
+                            ) : (
+                                <>
+                                    <Play className="w-5 h-5" />
+                                    バッチ処理を開始
+                                </>
+                            )}
                         </button>
                     </div>
                 </motion.div>
