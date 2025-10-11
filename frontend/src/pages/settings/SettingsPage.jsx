@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Settings, Wifi, Save, RotateCcw, HelpCircle, Monitor } from 'lucide-react';
+import { BACKEND_URL } from '../../api/config';
 
 const SettingsPage = () => {
     const [settings, setSettings] = useState({
-        backendUrl: 'http://162.43.19.70',
+        backendUrl: BACKEND_URL,
         characterCountRule: 50,
         macroOutputLimit: 100,
         categoryAutoSelection: true

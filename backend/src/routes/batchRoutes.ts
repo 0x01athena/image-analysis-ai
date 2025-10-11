@@ -107,4 +107,16 @@ router.get('/status', batchController.getProcessingStatus);
  */
 router.get('/results', batchController.getProcessingResults);
 
+/**
+ * @swagger
+ * /api/batch/debug:
+ *   get:
+ *     summary: Get debug information
+ *     tags: [Batch Processing]
+ *     responses:
+ *       200:
+ *         description: Debug information
+ */
+router.get('/debug', batchController.getDebugInfo);
+
 export default router;

@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 interface ProductImages {
     [productId: string]: string[];
@@ -58,18 +61,36 @@ class BatchController {
             const uploadedFiles = req.files as Express.Multer.File[];
             this.productImages = {};
 
+            console.log('Uploading files:', uploadedFiles.map(f => f.originalname));
+
             // Group images by product ID (extracted from filename)
             uploadedFiles.forEach(file => {
-                const filename = file.originalname;
+                // Handle both regular uploads and directory uploads
+                let filename = file.originalname;
+
+                // If it's a directory upload, extract just the filename from the path
+                if (filename.includes('/')) {
+                    filename = filename.split('/').pop() || filename;
+                }
+
                 const productId = filename.split('_')[0];
 
-                if (productId) {
+                console.log(`Processing file: ${file.originalname} -> ${filename}, Product ID: ${productId}`);
+
+                if (productId && filename.includes('_')) {
                     if (!this.productImages[productId]) {
                         this.productImages[productId] = [];
                     }
                     this.productImages[productId].push(file.filename);
+                } else {
+                    console.log(`Skipping file ${filename} - doesn't match expected pattern`);
                 }
             });
+
+            console.log('Final product images:', this.productImages);
+
+            // Save products to database
+            const savedProducts = await this.saveProductsToDatabase(this.productImages);
 
             const totalProducts = Object.keys(this.productImages).length;
             const totalImages = uploadedFiles.length;
@@ -80,6 +101,7 @@ class BatchController {
                 data: {
                     totalImages,
                     totalProducts,
+                    savedProducts,
                     productGroups: Object.keys(this.productImages).map(productId => ({
                         productId,
                         imageCount: this.productImages[productId].length,
@@ -103,7 +125,11 @@ class BatchController {
      */
     startBatchProcessing = async (req: Request, res: Response): Promise<void> => {
         try {
+            console.log('Starting batch processing. Product images:', Object.keys(this.productImages));
+            console.log('Product images count:', Object.keys(this.productImages).length);
+
             if (Object.keys(this.productImages).length === 0) {
+                console.log('No images available for processing');
                 res.status(400).json({
                     success: false,
                     message: 'No images available for processing'
@@ -168,6 +194,30 @@ class BatchController {
             res.status(500).json({
                 success: false,
                 message: 'Failed to get processing status',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Debug endpoint to check controller state
+     */
+    getDebugInfo = async (req: Request, res: Response): Promise<void> => {
+        try {
+            res.status(200).json({
+                success: true,
+                data: {
+                    productImagesCount: Object.keys(this.productImages).length,
+                    productImages: this.productImages,
+                    processingStatus: this.processingStatus,
+                    resultsCount: this.processingResults.length
+                }
+            });
+        } catch (error) {
+            console.error('Error getting debug info:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get debug info',
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
         }
@@ -289,6 +339,59 @@ class BatchController {
             '美容・健康', 'スポーツ', 'アウトドア', '家電', '雑貨'
         ];
         return categories[Math.floor(Math.random() * categories.length)];
+    }
+
+    /**
+     * Save products to database
+     */
+    private async saveProductsToDatabase(productImages: ProductImages): Promise<any[]> {
+        const savedProducts = [];
+
+        for (const [managementNumber, images] of Object.entries(productImages)) {
+            try {
+                // Check if product already exists
+                const existingProduct = await prisma.product.findUnique({
+                    where: { managementNumber }
+                });
+
+                if (existingProduct) {
+                    // Update existing product with new images
+                    const existingImages = JSON.parse(existingProduct?.images as string || "[]");
+                    const updatedImages = [...existingImages, ...images];
+                    const updatedProduct = await prisma.product.update({
+                        where: { managementNumber },
+                        data: {
+                            images: JSON.stringify(updatedImages),
+                            updatedAt: new Date()
+                        }
+                    });
+                    savedProducts.push(updatedProduct);
+                    console.log(`Updated product ${managementNumber} with ${images.length} new images`);
+                } else {
+                    // Create new product
+                    const newProduct = await prisma.product.create({
+                        data: {
+                            managementNumber,
+                            images: JSON.stringify(images),
+                            title: null,
+                            level: null,
+                            measurement: null,
+                            condition: null,
+                            category: null,
+                            shop1: null,
+                            shop2: null,
+                            shop3: null
+                        }
+                    });
+                    savedProducts.push(newProduct);
+                    console.log(`Created new product ${managementNumber} with ${images.length} images`);
+                }
+            } catch (error) {
+                console.error(`Error saving product ${managementNumber}:`, error);
+            }
+        }
+
+        return savedProducts;
     }
 }
 
