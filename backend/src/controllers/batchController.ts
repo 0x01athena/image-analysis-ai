@@ -1,48 +1,11 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { productService, ProductImages } from '../services/productService';
+import { processingStateService, ProcessingResult } from '../services/ProcessingStateService';
+import { openAIService, OpenAIProductAnalysis } from '../services/OpenAIService';
 
-const prisma = new PrismaClient();
 
-interface ProductImages {
-    [productId: string]: string[];
-}
-
-interface ProcessingStatus {
-    isProcessing: boolean;
-    currentProduct: string | null;
-    totalProducts: number;
-    processedProducts: number;
-    failedProducts: number;
-    startTime: Date | null;
-    estimatedCompletion: Date | null;
-}
-
-interface ProcessingResult {
-    productId: string;
-    images: string[];
-    title: string;
-    category: string;
-    rank: 'A' | 'B' | 'C';
-    measurements?: string;
-    condition?: string;
-    processingTime: number;
-    error?: string;
-}
 
 class BatchController {
-    private processingStatus: ProcessingStatus = {
-        isProcessing: false,
-        currentProduct: null,
-        totalProducts: 0,
-        processedProducts: 0,
-        failedProducts: 0,
-        startTime: null,
-        estimatedCompletion: null
-    };
-
-    private processingResults: ProcessingResult[] = [];
-    private productImages: ProductImages = {};
-
     /**
      * Upload images from directory and group by product ID
      */
@@ -57,7 +20,7 @@ class BatchController {
             }
 
             const uploadedFiles = req.files as Express.Multer.File[];
-            this.productImages = {};
+            const productImages: ProductImages = {};
 
             console.log('Uploading files:', uploadedFiles.map(f => f.originalname));
 
@@ -76,34 +39,38 @@ class BatchController {
                 console.log(`Processing file: ${file.originalname} -> ${filename}, Product ID: ${productId}`);
 
                 if (productId && filename.includes('_')) {
-                    if (!this.productImages[productId]) {
-                        this.productImages[productId] = [];
+                    if (!productImages[productId]) {
+                        productImages[productId] = [];
                     }
-                    this.productImages[productId].push(file.filename);
+                    productImages[productId].push(file.filename);
                 } else {
                     console.log(`Skipping file ${filename} - doesn't match expected pattern`);
                 }
             });
 
-            console.log('Final product images:', this.productImages);
+            console.log('Final product images:', productImages);
 
             // Save products to database
-            const savedProducts = await this.saveProductsToDatabase(this.productImages);
+            const savedProducts = await productService.saveProductsFromImages(productImages);
 
-            const totalProducts = Object.keys(this.productImages).length;
+            // Create a processing session
+            const sessionId = processingStateService.createSession(productImages);
+
+            const totalProducts = Object.keys(productImages).length;
             const totalImages = uploadedFiles.length;
 
             res.status(200).json({
                 success: true,
                 message: 'Images uploaded successfully',
                 data: {
+                    sessionId,
                     totalImages,
                     totalProducts,
                     savedProducts,
-                    productGroups: Object.keys(this.productImages).map(productId => ({
+                    productGroups: Object.keys(productImages).map(productId => ({
                         productId,
-                        imageCount: this.productImages[productId].length,
-                        images: this.productImages[productId]
+                        imageCount: productImages[productId].length,
+                        images: productImages[productId]
                     }))
                 }
             });
@@ -123,10 +90,31 @@ class BatchController {
      */
     startBatchProcessing = async (req: Request, res: Response): Promise<void> => {
         try {
-            console.log('Starting batch processing. Product images:', Object.keys(this.productImages));
-            console.log('Product images count:', Object.keys(this.productImages).length);
+            // Handle case where req.body might be undefined
+            const body = req.body || {};
+            const { sessionId } = body;
 
-            if (Object.keys(this.productImages).length === 0) {
+            if (!sessionId) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Session ID is required in request body'
+                });
+                return;
+            }
+
+            const session = processingStateService.getSession(sessionId);
+            if (!session) {
+                res.status(404).json({
+                    success: false,
+                    message: 'Session not found or expired'
+                });
+                return;
+            }
+
+            console.log('Starting batch processing. Product images:', Object.keys(session.productImages));
+            console.log('Product images count:', Object.keys(session.productImages).length);
+
+            if (Object.keys(session.productImages).length === 0) {
                 console.log('No images available for processing');
                 res.status(400).json({
                     success: false,
@@ -135,7 +123,7 @@ class BatchController {
                 return;
             }
 
-            if (this.processingStatus.isProcessing) {
+            if (session.processingStatus.isProcessing) {
                 res.status(400).json({
                     success: false,
                     message: 'Batch processing is already in progress'
@@ -144,27 +132,26 @@ class BatchController {
             }
 
             // Initialize processing status
-            this.processingStatus = {
+            processingStateService.updateProcessingStatus(sessionId, {
                 isProcessing: true,
                 currentProduct: null,
-                totalProducts: Object.keys(this.productImages).length,
+                totalProducts: Object.keys(session.productImages).length,
                 processedProducts: 0,
                 failedProducts: 0,
                 startTime: new Date(),
                 estimatedCompletion: null
-            };
-
-            this.processingResults = [];
+            });
 
             // Start processing in background
-            this.processProductsAsync();
+            this.processProductsAsync(sessionId);
 
             res.status(200).json({
                 success: true,
                 message: 'Batch processing started',
                 data: {
-                    totalProducts: this.processingStatus.totalProducts,
-                    startTime: this.processingStatus.startTime
+                    sessionId,
+                    totalProducts: Object.keys(session.productImages).length,
+                    startTime: new Date()
                 }
             });
 
@@ -178,64 +165,52 @@ class BatchController {
         }
     };
 
-    /**
-     * Debug endpoint to check controller state
-     */
-    getDebugInfo = async (req: Request, res: Response): Promise<void> => {
-        try {
-            res.status(200).json({
-                success: true,
-                data: {
-                    productImagesCount: Object.keys(this.productImages).length,
-                    productImages: this.productImages,
-                    processingStatus: this.processingStatus,
-                    resultsCount: this.processingResults.length
-                }
-            });
-        } catch (error) {
-            console.error('Error getting debug info:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Failed to get debug info',
-                error: error instanceof Error ? error.message : 'Unknown error'
-            });
-        }
-    };
 
     /**
      * Process products asynchronously (single thread simulation)
      */
-    private async processProductsAsync() {
-        const productIds = Object.keys(this.productImages);
+    private async processProductsAsync(sessionId: string) {
+        const session = processingStateService.getSession(sessionId);
+        if (!session) return;
+
+        const productIds = Object.keys(session.productImages);
 
         for (const productId of productIds) {
-            this.processingStatus.currentProduct = productId;
+            processingStateService.updateProcessingStatus(sessionId, {
+                currentProduct: productId
+            });
 
             try {
                 const startTime = Date.now();
-                const result = await this.processSingleProduct(productId, this.productImages[productId]);
+                const result = await this.processSingleProduct(productId, session.productImages[productId]);
                 const processingTime = Date.now() - startTime;
 
-                this.processingResults.push({
+                const processingResult: ProcessingResult = {
                     ...result,
                     processingTime
-                });
+                };
 
-                this.processingStatus.processedProducts++;
+                processingStateService.addProcessingResult(sessionId, processingResult);
+                processingStateService.updateProcessingStatus(sessionId, {
+                    processedProducts: session.processingStatus.processedProducts + 1
+                });
             } catch (error) {
                 console.error(`Error processing product ${productId}:`, error);
 
-                this.processingResults.push({
+                const processingResult: ProcessingResult = {
                     productId,
-                    images: this.productImages[productId],
+                    images: session.productImages[productId],
                     title: '',
                     category: '',
                     rank: 'C',
                     processingTime: 0,
                     error: error instanceof Error ? error.message : 'Unknown error'
-                });
+                };
 
-                this.processingStatus.failedProducts++;
+                processingStateService.addProcessingResult(sessionId, processingResult);
+                processingStateService.updateProcessingStatus(sessionId, {
+                    failedProducts: session.processingStatus.failedProducts + 1
+                });
             }
 
             // Simulate processing delay
@@ -243,97 +218,274 @@ class BatchController {
         }
 
         // Mark processing as complete
-        this.processingStatus.isProcessing = false;
-        this.processingStatus.currentProduct = null;
-        this.processingStatus.estimatedCompletion = new Date();
+        processingStateService.updateProcessingStatus(sessionId, {
+            isProcessing: false,
+            currentProduct: null,
+            estimatedCompletion: new Date()
+        });
     }
 
     /**
-     * Process a single product (simulate AI analysis)
+     * Process a single product using OpenAI Vision API
      */
     private async processSingleProduct(productId: string, images: string[]): Promise<Omit<ProcessingResult, 'processingTime'>> {
-        // Simulate AI processing delay
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 1000));
+        try {
+            console.log(`Processing product ${productId} with ${images.length} images using OpenAI...`);
 
-        // Simulate different outcomes based on random factors
-        const randomFactor = Math.random();
+            // Call OpenAI to analyze the product images
+            const analysis: OpenAIProductAnalysis = await openAIService.analyzeProductImages(productId, images);
 
-        if (randomFactor < 0.1) {
-            // 10% chance of failure (Rank C)
-            throw new Error('AI analysis failed');
-        } else if (randomFactor < 0.4) {
-            // 30% chance of Rank B (short title)
+            console.log(`OpenAI analysis for product ${productId}:`, analysis);
+
+            // Update the product in the database with the analysis results
+            await productService.updateProductWithResults(productId, {
+                managementNumber: productId,
+                images: images,
+                title: analysis.title,
+                level: analysis.level,
+                measurement: analysis.measurement,
+                condition: analysis.condition,
+                category: analysis.category,
+                shop1: analysis.shop1,
+                shop2: analysis.shop2,
+                shop3: analysis.shop3
+            });
+
             return {
                 productId,
                 images,
-                title: `商品タイトル ${productId} 短い`,
-                category: '',
-                rank: 'B'
+                title: analysis.title,
+                category: analysis.category,
+                rank: analysis.level,
+                measurements: analysis.measurement,
+                condition: analysis.condition
             };
-        } else {
-            // 60% chance of Rank A (long title)
+
+        } catch (error) {
+            console.error(`Error processing product ${productId} with OpenAI:`, error);
+
+            // If OpenAI fails, return a default result
             return {
                 productId,
                 images,
-                title: `高品質な商品タイトル ${productId} 詳細な説明付き おすすめ商品`,
-                category: '',
-                rank: 'A'
+                title: `商品 ${productId}`,
+                category: '未分類',
+                rank: 'C',
+                measurements: '測定不可',
+                condition: '状態不明'
             };
         }
     }
 
     /**
-     * Save products to database
+     * Get processing status for a session
      */
-    private async saveProductsToDatabase(productImages: ProductImages): Promise<any[]> {
-        const savedProducts = [];
+    getProcessingStatus = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { sessionId } = req.params;
 
-        for (const [managementNumber, images] of Object.entries(productImages)) {
-            try {
-                // Check if product already exists
-                const existingProduct = await prisma.product.findUnique({
-                    where: { managementNumber }
+            if (!sessionId) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Session ID is required'
                 });
-
-                if (existingProduct) {
-                    // Update existing product with new images
-                    const existingImages = JSON.parse(existingProduct?.images as string || "[]");
-                    const updatedImages = [...existingImages, ...images];
-                    const updatedProduct = await prisma.product.update({
-                        where: { managementNumber },
-                        data: {
-                            images: JSON.stringify(updatedImages),
-                            updatedAt: new Date()
-                        }
-                    });
-                    savedProducts.push(updatedProduct);
-                    console.log(`Updated product ${managementNumber} with ${images.length} new images`);
-                } else {
-                    // Create new product
-                    const newProduct = await prisma.product.create({
-                        data: {
-                            managementNumber,
-                            images: JSON.stringify(images),
-                            title: null,
-                            level: null,
-                            measurement: null,
-                            condition: null,
-                            category: null,
-                            shop1: null,
-                            shop2: null,
-                            shop3: null
-                        }
-                    });
-                    savedProducts.push(newProduct);
-                    console.log(`Created new product ${managementNumber} with ${images.length} images`);
-                }
-            } catch (error) {
-                console.error(`Error saving product ${managementNumber}:`, error);
+                return;
             }
-        }
 
-        return savedProducts;
-    }
+            const status = processingStateService.getProcessingStatus(sessionId);
+            if (!status) {
+                res.status(404).json({
+                    success: false,
+                    message: 'Session not found or expired'
+                });
+                return;
+            }
+
+            res.status(200).json({
+                success: true,
+                data: status
+            });
+
+        } catch (error) {
+            console.error('Error getting processing status:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get processing status',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Get processing results for a session
+     */
+    getProcessingResults = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { sessionId } = req.params;
+
+            if (!sessionId) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Session ID is required'
+                });
+                return;
+            }
+
+            const results = processingStateService.getProcessingResults(sessionId);
+            if (!results) {
+                res.status(404).json({
+                    success: false,
+                    message: 'Session not found or expired'
+                });
+                return;
+            }
+
+            res.status(200).json({
+                success: true,
+                data: results
+            });
+
+        } catch (error) {
+            console.error('Error getting processing results:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get processing results',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Get all products with pagination and filtering
+     */
+    getAllProducts = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { page = 1, limit = 50, rank, date } = req.query;
+
+            const products = await productService.getAllProducts();
+
+            // Apply filters
+            let filteredProducts = products;
+
+            if (rank) {
+                filteredProducts = filteredProducts.filter(p => p.level === rank);
+            }
+
+            if (date) {
+                const targetDate = new Date(date as string);
+                filteredProducts = filteredProducts.filter(p => {
+                    const productDate = new Date(p.createdAt);
+                    return productDate.toDateString() === targetDate.toDateString();
+                });
+            }
+
+            // Apply pagination
+            const startIndex = (Number(page) - 1) * Number(limit);
+            const endIndex = startIndex + Number(limit);
+            const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+
+            res.status(200).json({
+                success: true,
+                data: {
+                    products: paginatedProducts,
+                    total: filteredProducts.length,
+                    page: Number(page),
+                    limit: Number(limit),
+                    totalPages: Math.ceil(filteredProducts.length / Number(limit))
+                }
+            });
+
+        } catch (error) {
+            console.error('Error getting products:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get products',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Get single product by management number
+     */
+    getProduct = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { managementNumber } = req.params;
+
+            const product = await productService.getProductByManagementNumber(managementNumber);
+
+            if (!product) {
+                res.status(404).json({
+                    success: false,
+                    message: 'Product not found'
+                });
+                return;
+            }
+
+            res.status(200).json({
+                success: true,
+                data: product
+            });
+
+        } catch (error) {
+            console.error('Error getting product:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get product',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Update product
+     */
+    updateProduct = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { managementNumber } = req.params;
+            const updateData = req.body;
+
+            const updatedProduct = await productService.updateProductWithResults(managementNumber, updateData);
+
+            res.status(200).json({
+                success: true,
+                message: 'Product updated successfully',
+                data: updatedProduct
+            });
+
+        } catch (error) {
+            console.error('Error updating product:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to update product',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Delete product
+     */
+    deleteProduct = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { managementNumber } = req.params;
+
+            await productService.deleteProduct(managementNumber);
+
+            res.status(200).json({
+                success: true,
+                message: 'Product deleted successfully'
+            });
+
+        } catch (error) {
+            console.error('Error deleting product:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to delete product',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
 }
 
 export const batchController = new BatchController();

@@ -5,6 +5,7 @@ import LandingPage from './pages/landing/LandingPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import BatchProcessingPage from './pages/batch-processing/BatchProcessingPage';
 import ResultsPage from './pages/results/ResultsPage';
+import ProductsPage from './pages/products/ProductsPage';
 import "./App.css";
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/batch-processing" element={<BatchProcessingPage />} />
             <Route path="/results" element={<ResultsPage />} />
+            <Route path="/products" element={<ProductsPage />} />
           </Routes>
         </div>
       </div>

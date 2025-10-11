@@ -25,15 +25,86 @@ export const uploadDirectoryImages = async (files) => {
 
 /**
  * Start batch processing for uploaded images
+ * @param {string} sessionId - Session ID from upload response
  * @returns {Promise<Object>} Processing start result
  */
-export const startBatchProcessing = async () => {
+export const startBatchProcessing = async (sessionId) => {
     const response = await fetch(`${API_BASE_URL}/batch/start-processing`, {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sessionId })
+    });
+
+    return response.json();
+};
+
+/**
+ * Get all products with pagination and filtering
+ * @param {Object} params - Query parameters
+ * @returns {Promise<Object>} Products list
+ */
+export const getAllProducts = async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await fetch(`${API_BASE_URL}/batch/products?${queryString}`);
+
+    if (!response.ok) {
+        throw new Error(`Failed to get products: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
+/**
+ * Get single product by management number
+ * @param {string} managementNumber - Product management number
+ * @returns {Promise<Object>} Product data
+ */
+export const getProduct = async (managementNumber) => {
+    const response = await fetch(`${API_BASE_URL}/batch/products/${managementNumber}`);
+
+    if (!response.ok) {
+        throw new Error(`Failed to get product: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
+/**
+ * Update product
+ * @param {string} managementNumber - Product management number
+ * @param {Object} updateData - Product update data
+ * @returns {Promise<Object>} Updated product
+ */
+export const updateProduct = async (managementNumber, updateData) => {
+    const response = await fetch(`${API_BASE_URL}/batch/products/${managementNumber}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData)
     });
 
     if (!response.ok) {
-        throw new Error(`Processing start failed: ${response.statusText}`);
+        throw new Error(`Failed to update product: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
+/**
+ * Delete product
+ * @param {string} managementNumber - Product management number
+ * @returns {Promise<Object>} Delete result
+ */
+export const deleteProduct = async (managementNumber) => {
+    const response = await fetch(`${API_BASE_URL}/batch/products/${managementNumber}`, {
+        method: 'DELETE'
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to delete product: ${response.statusText}`);
     }
 
     return response.json();

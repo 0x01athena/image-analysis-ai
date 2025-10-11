@@ -9,7 +9,7 @@ const router = express.Router();
 // Configure multer for file uploads
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const uploadPath = path.join(__dirname, '../../uploads/images');
+        const uploadPath = path.join(__dirname, '../../public/images');
         if (!fs.existsSync(uploadPath)) {
             fs.mkdirSync(uploadPath, { recursive: true });
         }
@@ -73,11 +73,21 @@ router.post('/upload-directory', upload.array('images', 5000), batchController.u
  *   post:
  *     summary: Start batch processing for uploaded images
  *     tags: [Batch Processing]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *                 description: Session ID from upload-directory response
  *     responses:
  *       200:
  *         description: Batch processing started successfully
  *       400:
- *         description: No images to process
+ *         description: No images to process or session ID missing
  *       500:
  *         description: Server error
  */
@@ -85,14 +95,190 @@ router.post('/start-processing', batchController.startBatchProcessing);
 
 /**
  * @swagger
- * /api/batch/debug:
+ * /api/batch/status/{sessionId}:
  *   get:
- *     summary: Get debug information
+ *     summary: Get processing status for a session
  *     tags: [Batch Processing]
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Session ID
  *     responses:
  *       200:
- *         description: Debug information
+ *         description: Processing status retrieved successfully
+ *       404:
+ *         description: Session not found or expired
+ *       500:
+ *         description: Server error
  */
-router.get('/debug', batchController.getDebugInfo);
+router.get('/status/:sessionId', batchController.getProcessingStatus);
+
+/**
+ * @swagger
+ * /api/batch/results/{sessionId}:
+ *   get:
+ *     summary: Get processing results for a session
+ *     tags: [Batch Processing]
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Session ID
+ *     responses:
+ *       200:
+ *         description: Processing results retrieved successfully
+ *       404:
+ *         description: Session not found or expired
+ *       500:
+ *         description: Server error
+ */
+/**
+ * @swagger
+ * /api/batch/results/{sessionId}:
+ *   get:
+ *     summary: Get processing results for a session
+ *     tags: [Batch Processing]
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Session ID
+ *     responses:
+ *       200:
+ *         description: Processing results retrieved successfully
+ *       404:
+ *         description: Session not found or expired
+ *       500:
+ *         description: Server error
+ */
+router.get('/results/:sessionId', batchController.getProcessingResults);
+
+/**
+ * @swagger
+ * /api/batch/products:
+ *   get:
+ *     summary: Get all products with pagination and filtering
+ *     tags: [Products]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Items per page
+ *       - in: query
+ *         name: rank
+ *         schema:
+ *           type: string
+ *           enum: [A, B, C]
+ *         description: Filter by generation rank
+ *       - in: query
+ *         name: date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter by creation date
+ *     responses:
+ *       200:
+ *         description: Products retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/products', batchController.getAllProducts);
+
+/**
+ * @swagger
+ * /api/batch/products/{managementNumber}:
+ *   get:
+ *     summary: Get single product by management number
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: managementNumber
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product management number
+ *     responses:
+ *       200:
+ *         description: Product retrieved successfully
+ *       404:
+ *         description: Product not found
+ *       500:
+ *         description: Server error
+ *   put:
+ *     summary: Update product
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: managementNumber
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product management number
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               level:
+ *                 type: string
+ *               measurement:
+ *                 type: string
+ *               condition:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *               shop1:
+ *                 type: string
+ *               shop2:
+ *                 type: string
+ *               shop3:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Product updated successfully
+ *       404:
+ *         description: Product not found
+ *       500:
+ *         description: Server error
+ *   delete:
+ *     summary: Delete product
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: managementNumber
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product management number
+ *     responses:
+ *       200:
+ *         description: Product deleted successfully
+ *       404:
+ *         description: Product not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/products/:managementNumber', batchController.getProduct);
+router.put('/products/:managementNumber', batchController.updateProduct);
+router.delete('/products/:managementNumber', batchController.deleteProduct);
 
 export default router;

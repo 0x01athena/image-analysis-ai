@@ -8,6 +8,7 @@ const BatchProcessingPage = () => {
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [sessionId, setSessionId] = useState(null);
     const fileInputRef = useRef(null);
 
     const handleDirectorySelect = () => {
@@ -41,11 +42,18 @@ const BatchProcessingPage = () => {
             const uploadResult = await uploadDirectoryImages(selectedFiles);
             console.log('Upload result:', uploadResult);
 
+            // Store the sessionId from upload response
+            if (uploadResult.success && uploadResult.data.sessionId) {
+                setSessionId(uploadResult.data.sessionId);
+            } else {
+                throw new Error('No session ID received from upload');
+            }
+
             setIsUploading(false);
             setIsProcessing(true);
 
-            // Start batch processing using API function
-            const processingResult = await startBatchProcessing();
+            // Start batch processing using API function with sessionId
+            const processingResult = await startBatchProcessing(uploadResult.data.sessionId);
             console.log('Processing started:', processingResult);
 
             setIsProcessing(false);
