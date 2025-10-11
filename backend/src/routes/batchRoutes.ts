@@ -280,5 +280,58 @@ router.get('/products', batchController.getAllProducts);
 router.get('/products/:managementNumber', batchController.getProduct);
 router.put('/products/:managementNumber', batchController.updateProduct);
 router.delete('/products/:managementNumber', batchController.deleteProduct);
+/**
+ * @swagger
+ * /api/batch/products:
+ *   delete:
+ *     summary: Delete multiple products
+ *     tags: [Products]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               managementNumbers:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["1508260032162", "1508260032797"]
+ *     responses:
+ *       200:
+ *         description: Products deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     deleted:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     failed:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     totalRequested:
+ *                       type: number
+ *                     totalDeleted:
+ *                       type: number
+ *                     totalFailed:
+ *                       type: number
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Server error
+ */
+router.delete('/products', batchController.deleteMultipleProducts);
 
 export default router;

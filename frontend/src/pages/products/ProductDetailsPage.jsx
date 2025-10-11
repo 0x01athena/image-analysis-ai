@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Save, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getProduct, updateProduct, deleteProduct, getAllProducts } from '../../api/batchApi';
 
-const ProductDetailsPage = ({ managementNumber, onBack, onNext, onPrevious }) => {
+const ProductDetailsPage = () => {
+    const { managementNumber } = useParams();
+    const navigate = useNavigate();
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -82,7 +85,7 @@ const ProductDetailsPage = ({ managementNumber, onBack, onNext, onPrevious }) =>
             try {
                 await deleteProduct(managementNumber);
                 alert('商品を削除しました');
-                onBack();
+                navigate('/products');
             } catch (error) {
                 console.error('Error deleting product:', error);
                 alert('削除に失敗しました: ' + error.message);
@@ -108,7 +111,7 @@ const ProductDetailsPage = ({ managementNumber, onBack, onNext, onPrevious }) =>
             const nextProduct = sameDateAndRank[nextIndex];
 
             if (nextProduct && nextProduct.managementNumber !== managementNumber) {
-                onNext(nextProduct.managementNumber);
+                navigate(`/products/${nextProduct.managementNumber}`);
             }
         }
     };
@@ -149,7 +152,7 @@ const ProductDetailsPage = ({ managementNumber, onBack, onNext, onPrevious }) =>
                 <div className="text-center">
                     <p className="text-gray-600">商品が見つかりません</p>
                     <button
-                        onClick={onBack}
+                        onClick={() => navigate('/products')}
                         className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300"
                     >
                         戻る
@@ -166,13 +169,13 @@ const ProductDetailsPage = ({ managementNumber, onBack, onNext, onPrevious }) =>
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6 }}
-                    className="bg-white rounded-2xl shadow-lg p-8"
+                    className="bg-white rounded-2xl shadow-lg p-8 pb-10"
                 >
                     {/* Header */}
-                    <div className="mb-8 flex items-center justify-between">
+                    <div className="mb-6 flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <button
-                                onClick={onBack}
+                                onClick={() => navigate('/products')}
                                 className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-300"
                             >
                                 <ArrowLeft className="w-5 h-5" />
@@ -288,9 +291,7 @@ const ProductDetailsPage = ({ managementNumber, onBack, onNext, onPrevious }) =>
                         </div>
 
                         {/* Product Details Form */}
-                        <div className="space-y-6">
-                            <h2 className="text-lg font-semibold text-gray-900">商品情報</h2>
-
+                        <div className="space-y-4">
                             {/* Generation Result */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -317,9 +318,6 @@ const ProductDetailsPage = ({ managementNumber, onBack, onNext, onPrevious }) =>
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     placeholder="A, B, C"
                                 />
-                                <p className="text-xs text-red-600 mt-1">
-                                    ※Tabを押すと編集完了でフィルタで絞ってる 同じ月日、同じ生成ランクの次の商品に飛ぶ
-                                </p>
                             </div>
 
                             {/* Measurements */}

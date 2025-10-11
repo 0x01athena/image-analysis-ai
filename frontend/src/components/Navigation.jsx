@@ -10,7 +10,6 @@ const Navigation = () => {
     const navItems = [
         { path: '/batch-processing', label: '一括処理', icon: FileText },
         { path: '/products', label: '商品一覧', icon: Package },
-        { path: '/results', label: '結果', icon: BarChart3 },
         { path: '/settings', label: '設定', icon: Settings },
     ];
 

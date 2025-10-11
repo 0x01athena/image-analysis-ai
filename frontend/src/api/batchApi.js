@@ -109,3 +109,20 @@ export const deleteProduct = async (managementNumber) => {
 
     return response.json();
 };
+
+export const deleteMultipleProducts = async (managementNumbers) => {
+    const response = await fetch(`${API_BASE_URL}/batch/products`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ managementNumbers }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete products');
+    }
+
+    return response.json();
+};

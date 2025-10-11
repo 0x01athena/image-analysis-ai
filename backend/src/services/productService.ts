@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import fs from 'fs';
+import path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -132,17 +134,72 @@ export class ProductService {
     }
 
     /**
-     * Delete product by management number
+     * Delete product by management number and associated images
      */
     async deleteProduct(managementNumber: string): Promise<any> {
         try {
-            return await prisma.product.delete({
+            // First, get the product to retrieve image filenames
+            const product = await prisma.product.findUnique({
                 where: { managementNumber }
             });
+
+            if (!product) {
+                throw new Error(`Product with management number ${managementNumber} not found`);
+            }
+
+            // Delete the product from database
+            const deletedProduct = await prisma.product.delete({
+                where: { managementNumber }
+            });
+
+            // Delete associated image files
+            try {
+                const images = JSON.parse(product.images as string || "[]");
+                const imagesDir = path.join(__dirname, '../../public/images');
+                
+                for (const imageFilename of images) {
+                    const imagePath = path.join(imagesDir, imageFilename);
+                    
+                    // Check if file exists before attempting to delete
+                    if (fs.existsSync(imagePath)) {
+                        fs.unlinkSync(imagePath);
+                        console.log(`Deleted image file: ${imageFilename}`);
+                    } else {
+                        console.log(`Image file not found: ${imageFilename}`);
+                    }
+                }
+            } catch (imageError) {
+                console.error(`Error deleting image files for product ${managementNumber}:`, imageError);
+                // Don't throw error here - product is already deleted from database
+                // Log the error but continue with successful response
+            }
+
+            console.log(`Successfully deleted product ${managementNumber} and associated images`);
+            return deletedProduct;
         } catch (error) {
             console.error(`Error deleting product ${managementNumber}:`, error);
             throw error;
         }
+    }
+
+    /**
+     * Delete multiple products by management numbers and associated images
+     */
+    async deleteMultipleProducts(managementNumbers: string[]): Promise<{ deleted: string[], failed: string[] }> {
+        const deleted: string[] = [];
+        const failed: string[] = [];
+
+        for (const managementNumber of managementNumbers) {
+            try {
+                await this.deleteProduct(managementNumber);
+                deleted.push(managementNumber);
+            } catch (error) {
+                console.error(`Failed to delete product ${managementNumber}:`, error);
+                failed.push(managementNumber);
+            }
+        }
+
+        return { deleted, failed };
     }
 }
 

@@ -368,12 +368,12 @@ class BatchController {
             let filteredProducts = products;
 
             if (rank) {
-                filteredProducts = filteredProducts.filter(p => p.level === rank);
+                filteredProducts = filteredProducts.filter((p: any) => p.level === rank);
             }
 
             if (date) {
                 const targetDate = new Date(date as string);
-                filteredProducts = filteredProducts.filter(p => {
+                filteredProducts = filteredProducts.filter((p: any) => {
                     const productDate = new Date(p.createdAt);
                     return productDate.toDateString() === targetDate.toDateString();
                 });
@@ -482,6 +482,45 @@ class BatchController {
             res.status(500).json({
                 success: false,
                 message: 'Failed to delete product',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Delete multiple products
+     */
+    deleteMultipleProducts = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { managementNumbers } = req.body;
+
+            if (!Array.isArray(managementNumbers) || managementNumbers.length === 0) {
+                res.status(400).json({
+                    success: false,
+                    message: 'managementNumbers must be a non-empty array'
+                });
+                return;
+            }
+
+            const result = await productService.deleteMultipleProducts(managementNumbers);
+
+            res.status(200).json({
+                success: true,
+                message: `Deleted ${result.deleted.length} products successfully`,
+                data: {
+                    deleted: result.deleted,
+                    failed: result.failed,
+                    totalRequested: managementNumbers.length,
+                    totalDeleted: result.deleted.length,
+                    totalFailed: result.failed.length
+                }
+            });
+
+        } catch (error) {
+            console.error('Error deleting multiple products:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to delete products',
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
         }

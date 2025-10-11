@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, Trash2, ChevronLeft, ChevronRight, Filter, Search } from 'lucide-react';
-import { getAllProducts, deleteProduct } from '../../api/batchApi';
+import { useNavigate } from 'react-router-dom';
+import { getAllProducts, deleteProduct, deleteMultipleProducts } from '../../api/batchApi';
 
-const ProductsViewPage = ({ onViewProduct, onNavigateToDetails }) => {
+const ProductsViewPage = () => {
+    const navigate = useNavigate();
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedProducts, setSelectedProducts] = useState(new Set());
@@ -76,20 +78,30 @@ const ProductsViewPage = ({ onViewProduct, onNavigateToDetails }) => {
     };
 
     const handleDeleteSelected = async () => {
-        if (selectedProducts.size === 0) return;
+        if (selectedProducts.size === 0) {
+            alert('削除する商品を選択してください');
+            return;
+        }
 
-        if (confirm(`${selectedProducts.size}個の商品を削除しますか？`)) {
+        const selectedArray = Array.from(selectedProducts);
+        const confirmMessage = `選択された ${selectedArray.length} 個の商品を削除しますか？\n\nこの操作は元に戻せません。`;
+
+        if (confirm(confirmMessage)) {
             try {
-                await Promise.all(
-                    Array.from(selectedProducts).map(managementNumber =>
-                        deleteProduct(managementNumber)
-                    )
-                );
-                await loadProducts();
+                const result = await deleteMultipleProducts(selectedArray);
+
+                if (result.data.totalFailed > 0) {
+                    alert(`削除完了: ${result.data.totalDeleted}個成功, ${result.data.totalFailed}個失敗\n\n失敗した商品: ${result.data.failed.join(', ')}`);
+                } else {
+                    alert(`${result.data.totalDeleted}個の商品を削除しました`);
+                }
+
+                // Clear selection and reload products
                 setSelectedProducts(new Set());
+                loadProducts();
             } catch (error) {
                 console.error('Error deleting products:', error);
-                alert('商品の削除に失敗しました: ' + error.message);
+                alert('削除に失敗しました: ' + error.message);
             }
         }
     };
@@ -254,7 +266,7 @@ const ProductsViewPage = ({ onViewProduct, onNavigateToDetails }) => {
                                             <td className="p-4">
                                                 <div className="flex items-center gap-2">
                                                     <button
-                                                        onClick={() => onNavigateToDetails(product.managementNumber)}
+                                                        onClick={() => navigate(`/products/${product.managementNumber}`)}
                                                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-300"
                                                         title="詳細を見る"
                                                     >
