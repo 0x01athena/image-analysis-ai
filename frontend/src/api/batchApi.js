@@ -38,31 +38,3 @@ export const startBatchProcessing = async () => {
 
     return response.json();
 };
-
-/**
- * Get current processing status
- * @returns {Promise<Object>} Processing status
- */
-export const getProcessingStatus = async () => {
-    const response = await fetch(`${API_BASE_URL}/batch/status`);
-
-    if (!response.ok) {
-        throw new Error(`Status fetch failed: ${response.statusText}`);
-    }
-
-    return response.json();
-};
-
-/**
- * Get processing results
- * @returns {Promise<Object>} Processing results
- */
-export const getProcessingResults = async () => {
-    const response = await fetch(`${API_BASE_URL}/batch/results`);
-
-    if (!response.ok) {
-        throw new Error(`Results fetch failed: ${response.statusText}`);
-    }
-
-    return response.json();
-};

@@ -1,6 +1,4 @@
 import { Request, Response } from 'express';
-import path from 'path';
-import fs from 'fs';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -181,25 +179,6 @@ class BatchController {
     };
 
     /**
-     * Get current processing status
-     */
-    getProcessingStatus = async (req: Request, res: Response): Promise<void> => {
-        try {
-            res.status(200).json({
-                success: true,
-                data: this.processingStatus
-            });
-        } catch (error) {
-            console.error('Error getting processing status:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Failed to get processing status',
-                error: error instanceof Error ? error.message : 'Unknown error'
-            });
-        }
-    };
-
-    /**
      * Debug endpoint to check controller state
      */
     getDebugInfo = async (req: Request, res: Response): Promise<void> => {
@@ -218,33 +197,6 @@ class BatchController {
             res.status(500).json({
                 success: false,
                 message: 'Failed to get debug info',
-                error: error instanceof Error ? error.message : 'Unknown error'
-            });
-        }
-    };
-
-    /**
-     * Get processing results
-     */
-    getProcessingResults = async (req: Request, res: Response): Promise<void> => {
-        try {
-            res.status(200).json({
-                success: true,
-                data: {
-                    results: this.processingResults,
-                    summary: {
-                        total: this.processingResults.length,
-                        rankA: this.processingResults.filter(r => r.rank === 'A').length,
-                        rankB: this.processingResults.filter(r => r.rank === 'B').length,
-                        rankC: this.processingResults.filter(r => r.rank === 'C').length
-                    }
-                }
-            });
-        } catch (error) {
-            console.error('Error getting processing results:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Failed to get processing results',
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
         }
@@ -315,7 +267,7 @@ class BatchController {
                 productId,
                 images,
                 title: `商品タイトル ${productId} 短い`,
-                category: this.generateRandomCategory(),
+                category: '',
                 rank: 'B'
             };
         } else {
@@ -324,21 +276,10 @@ class BatchController {
                 productId,
                 images,
                 title: `高品質な商品タイトル ${productId} 詳細な説明付き おすすめ商品`,
-                category: this.generateRandomCategory(),
+                category: '',
                 rank: 'A'
             };
         }
-    }
-
-    /**
-     * Generate random category for simulation
-     */
-    private generateRandomCategory(): string {
-        const categories = [
-            'ファッション', 'アクセサリー', 'バッグ', '靴', '時計',
-            '美容・健康', 'スポーツ', 'アウトドア', '家電', '雑貨'
-        ];
-        return categories[Math.floor(Math.random() * categories.length)];
     }
 
     /**

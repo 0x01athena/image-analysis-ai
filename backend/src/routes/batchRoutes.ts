@@ -85,30 +85,6 @@ router.post('/start-processing', batchController.startBatchProcessing);
 
 /**
  * @swagger
- * /api/batch/status:
- *   get:
- *     summary: Get batch processing status
- *     tags: [Batch Processing]
- *     responses:
- *       200:
- *         description: Current processing status
- */
-router.get('/status', batchController.getProcessingStatus);
-
-/**
- * @swagger
- * /api/batch/results:
- *   get:
- *     summary: Get batch processing results
- *     tags: [Batch Processing]
- *     responses:
- *       200:
- *         description: Processing results
- */
-router.get('/results', batchController.getProcessingResults);
-
-/**
- * @swagger
  * /api/batch/debug:
  *   get:
  *     summary: Get debug information

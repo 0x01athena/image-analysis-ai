@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, FolderOpen, Trophy, Play, Upload, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { uploadDirectoryImages, startBatchProcessing, getProcessingStatus, getProcessingResults } from '../../api/batchApi';
+import { uploadDirectoryImages, startBatchProcessing } from '../../api/batchApi';
 
 const BatchProcessingPage = () => {
     const [directoryPath, setDirectoryPath] = useState('');
@@ -48,35 +48,13 @@ const BatchProcessingPage = () => {
             const processingResult = await startBatchProcessing();
             console.log('Processing started:', processingResult);
 
-            // Start polling for status updates
-            pollProcessingStatus();
-
+            setIsProcessing(false);
         } catch (error) {
             console.error('Error starting batch processing:', error);
             alert('バッチ処理の開始に失敗しました: ' + error.message);
             setIsUploading(false);
             setIsProcessing(false);
         }
-    };
-
-    const pollProcessingStatus = async () => {
-        const pollInterval = setInterval(async () => {
-            try {
-                const status = await getProcessingStatus();
-
-                if (!status.data.isProcessing) {
-                    clearInterval(pollInterval);
-                    setIsProcessing(false);
-
-                    // Get final results using API function
-                    const results = await getProcessingResults();
-                }
-            } catch (error) {
-                console.error('Error polling status:', error);
-                clearInterval(pollInterval);
-                setIsProcessing(false);
-            }
-        }, 2000);
     };
 
     return (
