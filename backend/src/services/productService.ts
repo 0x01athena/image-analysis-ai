@@ -23,12 +23,12 @@ export interface ProductData {
 
 export class ProductService {
     /**
-     * Save products to database from product images mapping
+     * Save products to database from product images mapping with duplicate detection
      */
     async saveProductsFromImages(productImages: ProductImages): Promise<any[]> {
         const savedProducts = [];
 
-        for (const [managementNumber, images] of Object.entries(productImages)) {
+        for (const [managementNumber, newImages] of Object.entries(productImages)) {
             try {
                 // Check if product already exists
                 const existingProduct = await prisma.product.findUnique({
@@ -36,24 +36,45 @@ export class ProductService {
                 });
 
                 if (existingProduct) {
-                    // Update existing product with new images
+                    // Get existing images
                     const existingImages = JSON.parse(existingProduct?.images as string || "[]");
-                    const updatedImages = [...existingImages, ...images];
-                    const updatedProduct = await prisma.product.update({
-                        where: { managementNumber },
-                        data: {
-                            images: JSON.stringify(updatedImages),
-                            updatedAt: new Date()
-                        }
-                    });
-                    savedProducts.push(updatedProduct);
-                    console.log(`Updated product ${managementNumber} with ${images.length} new images`);
+
+                    // Handle duplicate files in filesystem
+                    const processedNewImages = await this.handleDuplicateFiles(managementNumber, newImages);
+
+                    // Check for duplicates and merge images intelligently
+                    const mergedImages = this.mergeImagesWithDuplicateDetection(existingImages, processedNewImages);
+
+                    // Only update if there are actual changes
+                    if (mergedImages.length !== existingImages.length ||
+                        !this.arraysEqual(mergedImages, existingImages)) {
+
+                        const updatedProduct = await prisma.product.update({
+                            where: { managementNumber },
+                            data: {
+                                images: JSON.stringify(mergedImages),
+                                updatedAt: new Date()
+                            }
+                        });
+                        savedProducts.push(updatedProduct);
+
+                        const addedCount = mergedImages.length - existingImages.length;
+                        const duplicateCount = newImages.length - addedCount;
+
+                        console.log(`Updated product ${managementNumber}: ${addedCount} new images, ${duplicateCount} duplicates skipped`);
+                    } else {
+                        console.log(`Product ${managementNumber} already up to date, no changes needed`);
+                        savedProducts.push(existingProduct);
+                    }
                 } else {
+                    // Handle duplicate files for new products
+                    const processedNewImages = await this.handleDuplicateFiles(managementNumber, newImages);
+
                     // Create new product
                     const newProduct = await prisma.product.create({
                         data: {
                             managementNumber,
-                            images: JSON.stringify(images),
+                            images: JSON.stringify(processedNewImages),
                             title: null,
                             level: null,
                             measurement: null,
@@ -65,7 +86,7 @@ export class ProductService {
                         }
                     });
                     savedProducts.push(newProduct);
-                    console.log(`Created new product ${managementNumber} with ${images.length} images`);
+                    console.log(`Created new product ${managementNumber} with ${processedNewImages.length} images`);
                 }
             } catch (error) {
                 console.error(`Error saving product ${managementNumber}:`, error);
@@ -73,6 +94,79 @@ export class ProductService {
         }
 
         return savedProducts;
+    }
+
+    /**
+     * Get upload summary with duplicate detection results
+     */
+    async getUploadSummary(productImages: ProductImages): Promise<{
+        totalProducts: number;
+        newProducts: number;
+        updatedProducts: number;
+        totalImages: number;
+        newImages: number;
+        duplicateImages: number;
+        details: Array<{
+            managementNumber: string;
+            status: 'new' | 'updated' | 'no_change';
+            existingImages: number;
+            newImages: number;
+            duplicates: number;
+        }>;
+    }> {
+        const summary = {
+            totalProducts: Object.keys(productImages).length,
+            newProducts: 0,
+            updatedProducts: 0,
+            totalImages: 0,
+            newImages: 0,
+            duplicateImages: 0,
+            details: [] as Array<{
+                managementNumber: string;
+                status: 'new' | 'updated' | 'no_change';
+                existingImages: number;
+                newImages: number;
+                duplicates: number;
+            }>
+        };
+
+        for (const [managementNumber, newImages] of Object.entries(productImages)) {
+            const existingProduct = await prisma.product.findUnique({
+                where: { managementNumber }
+            });
+
+            const existingImages = existingProduct ? JSON.parse(existingProduct.images as string || "[]") : [];
+            const processedNewImages = await this.handleDuplicateFiles(managementNumber, newImages);
+            const mergedImages = this.mergeImagesWithDuplicateDetection(existingImages, processedNewImages);
+
+            const addedCount = mergedImages.length - existingImages.length;
+            const duplicateCount = newImages.length - addedCount;
+
+            let status: 'new' | 'updated' | 'no_change';
+            if (!existingProduct) {
+                status = 'new';
+                summary.newProducts++;
+            } else if (addedCount > 0) {
+                status = 'updated';
+                summary.updatedProducts++;
+            } else {
+                status = 'no_change';
+            }
+
+            summary.totalImages += newImages.length;
+            summary.newImages += addedCount;
+            summary.duplicateImages += duplicateCount;
+
+            summary.details.push({
+                managementNumber,
+                status,
+                existingImages: existingImages.length,
+                newImages: addedCount,
+                duplicates: duplicateCount
+            });
+        }
+
+        return summary;
     }
 
     /**
@@ -156,10 +250,10 @@ export class ProductService {
             try {
                 const images = JSON.parse(product.images as string || "[]");
                 const imagesDir = path.join(__dirname, '../../public/images');
-                
+
                 for (const imageFilename of images) {
                     const imagePath = path.join(imagesDir, imageFilename);
-                    
+
                     // Check if file exists before attempting to delete
                     if (fs.existsSync(imagePath)) {
                         fs.unlinkSync(imagePath);
@@ -200,6 +294,90 @@ export class ProductService {
         }
 
         return { deleted, failed };
+    }
+
+    /**
+     * Merge images with duplicate detection, maintaining sequence order
+     */
+    private mergeImagesWithDuplicateDetection(existingImages: string[], newImages: string[]): string[] {
+        const merged = [...existingImages];
+        const existingSet = new Set(existingImages);
+
+        for (const newImage of newImages) {
+            if (!existingSet.has(newImage)) {
+                merged.push(newImage);
+                existingSet.add(newImage);
+            }
+        }
+
+        return merged;
+    }
+
+    /**
+     * Check for duplicate files in the filesystem and handle them
+     */
+    async handleDuplicateFiles(managementNumber: string, newImageFilenames: string[]): Promise<string[]> {
+        const imagesDir = path.join(__dirname, '../../public/images');
+        const processedImages: string[] = [];
+
+        for (const filename of newImageFilenames) {
+            const filePath = path.join(imagesDir, filename);
+
+            // Check if file exists
+            if (fs.existsSync(filePath)) {
+                // File already exists, check if it's a duplicate
+                const existingProduct = await this.findProductByImage(filename);
+
+                if (existingProduct && existingProduct.managementNumber === managementNumber) {
+                    // Same product, same image - this is expected, keep it
+                    processedImages.push(filename);
+                    console.log(`Image ${filename} already exists for product ${managementNumber}, keeping it`);
+                } else if (existingProduct) {
+                    // Different product has this image - this might be a duplicate
+                    console.log(`Warning: Image ${filename} already exists for product ${existingProduct.managementNumber}, but being uploaded for ${managementNumber}`);
+                    processedImages.push(filename);
+                } else {
+                    // File exists but not in database - orphaned file, keep it
+                    processedImages.push(filename);
+                    console.log(`Image ${filename} exists in filesystem but not in database, keeping it`);
+                }
+            } else {
+                // File doesn't exist, this shouldn't happen after upload, but handle it
+                console.log(`Warning: Image ${filename} not found in filesystem`);
+                processedImages.push(filename);
+            }
+        }
+
+        return processedImages;
+    }
+
+    /**
+     * Find which product owns a specific image
+     */
+    private async findProductByImage(imageFilename: string): Promise<any | null> {
+        try {
+            const products = await prisma.product.findMany();
+
+            for (const product of products) {
+                const images = JSON.parse(product.images as string || "[]");
+                if (images.includes(imageFilename)) {
+                    return product;
+                }
+            }
+
+            return null;
+        } catch (error) {
+            console.error(`Error finding product for image ${imageFilename}:`, error);
+            return null;
+        }
+    }
+
+    /**
+     * Compare two arrays for equality
+     */
+    private arraysEqual(a: string[], b: string[]): boolean {
+        if (a.length !== b.length) return false;
+        return a.every((val, index) => val === b[index]);
     }
 }
 

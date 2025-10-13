@@ -9,7 +9,8 @@ import path from 'path';
 import { openAIService } from './services/OpenAIService';
 
 // Load environment variables
-dotenv.config();
+const envPath = path.join(__dirname, '../.env');
+dotenv.config({ path: envPath });
 
 const app = express();
 const PORT = process.env.PORT || 5000;

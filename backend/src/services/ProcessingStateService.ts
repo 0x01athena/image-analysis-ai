@@ -1,4 +1,4 @@
-import { ProductImages } from './productService';
+import { ProductImages } from './ProductService';
 
 export interface ProcessingStatus {
     isProcessing: boolean;

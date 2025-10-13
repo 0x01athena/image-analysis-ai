@@ -1,6 +1,15 @@
 import OpenAI from 'openai';
 import fs from 'fs';
 import path from 'path';
+import dotenv from 'dotenv';
+
+// Load environment variables
+const envPath = path.join(__dirname, '../../.env');
+const envLoaded = dotenv.config({ path: envPath });
+
+if (envLoaded.error) {
+    console.warn('⚠️  OpenAIService: Could not load .env file:', envLoaded.error.message);
+}
 
 export interface OpenAIProductAnalysis {
     title: string;
@@ -42,20 +51,9 @@ export class OpenAIService {
                 })
             );
 
-            const prompt = `Analyze these product images and provide detailed information in JSON format. 
+            const prompt = `
+            Analyze these product images and provide detailed information in JSON format. 
             
-            Please analyze the product and return a JSON object with the following structure:
-            {
-                "title": "Detailed product title in Japanese (商品タイトル)",
-                "category": "Product category in Japanese (カテゴリ)",
-                "level": "A" or "B" or "C" (A=high quality/long title, B=medium quality/short title, C=low quality/needs improvement),
-                "measurement": "Product measurements if visible (寸法)",
-                "condition": "Product condition assessment (状態)",
-                "shop1": "Primary shop recommendation (店舗1)",
-                "shop2": "Secondary shop recommendation (店舗2)",
-                "shop3": "Tertiary shop recommendation (店舗3)"
-            }
-
             Guidelines:
             - Title should be descriptive and appealing for e-commerce
             - Category should be specific (e.g., "電子機器", "家具", "衣類", etc.)
@@ -66,7 +64,18 @@ export class OpenAIService {
             - Condition should assess wear, damage, or quality
             - Shop recommendations should be relevant Japanese e-commerce platforms
 
-            Return only valid JSON, no additional text.`;
+            Please only analyze the product and return a valid JSON object with the following structure:
+            {
+                "title": "Detailed product title in Japanese (商品タイトル)",
+                "category": "Product category in Japanese (カテゴリ)",
+                "level": "A" or "B" or "C" (A=high quality/long title, B=medium quality/short title, C=low quality/needs improvement),
+                "measurement": "Product measurements if visible (寸法)",
+                "condition": "Product condition assessment (状態)",
+                "shop1": "Primary shop recommendation (店舗1)",
+                "shop2": "Secondary shop recommendation (店舗2)",
+                "shop3": "Tertiary shop recommendation (店舗3)"
+            }
+            **DO NOT CONTAIN \`\`\`json and \`\`\` in the response, just return a valid JSON data`;
 
             const response = await this.client.chat.completions.create({
                 model: "gpt-4o",
@@ -87,6 +96,7 @@ export class OpenAIService {
             });
 
             const content = response.choices[0]?.message?.content;
+            console.log('openai content', content);
             if (!content) {
                 throw new Error('No response from OpenAI');
             }

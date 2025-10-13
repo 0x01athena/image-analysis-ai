@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { productService, ProductImages } from '../services/productService';
+import { productService, ProductImages } from '../services/ProductService';
 import { processingStateService, ProcessingResult } from '../services/ProcessingStateService';
 import { openAIService, OpenAIProductAnalysis } from '../services/OpenAIService';
 
@@ -50,6 +50,9 @@ class BatchController {
 
             console.log('Final product images:', productImages);
 
+            // Get upload summary before saving
+            const uploadSummary = await productService.getUploadSummary(productImages);
+
             // Save products to database
             const savedProducts = await productService.saveProductsFromImages(productImages);
 
@@ -67,6 +70,13 @@ class BatchController {
                     totalImages,
                     totalProducts,
                     savedProducts,
+                    uploadSummary: {
+                        newProducts: uploadSummary.newProducts,
+                        updatedProducts: uploadSummary.updatedProducts,
+                        newImages: uploadSummary.newImages,
+                        duplicateImages: uploadSummary.duplicateImages,
+                        details: uploadSummary.details
+                    },
                     productGroups: Object.keys(productImages).map(productId => ({
                         productId,
                         imageCount: productImages[productId].length,
