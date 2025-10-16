@@ -58,11 +58,6 @@ export class ProductService {
                             }
                         });
                         savedProducts.push(updatedProduct);
-
-                        const addedCount = mergedImages.length - existingImages.length;
-                        const duplicateCount = newImages.length - addedCount;
-
-                        console.log(`Updated product ${managementNumber}: ${addedCount} new images, ${duplicateCount} duplicates skipped`);
                     } else {
                         console.log(`Product ${managementNumber} already up to date, no changes needed`);
                         savedProducts.push(existingProduct);
@@ -88,7 +83,6 @@ export class ProductService {
                         }
                     });
                     savedProducts.push(newProduct);
-                    console.log(`Created new product ${managementNumber} with ${processedNewImages.length} images`);
                 }
             } catch (error) {
                 console.error(`Error saving product ${managementNumber}:`, error);

@@ -27,7 +27,8 @@ export class OpenAIService {
 
     constructor() {
         this.client = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY || ''
+            apiKey: process.env.OPENAI_API_KEY || '',
+            timeout: 120000
         });
     }
 
@@ -53,7 +54,7 @@ export class OpenAIService {
 
             const prompt = `
 You are an expert in Japanese e-commerce cataloging and product title generation for online stores like Rakuten, Yahoo! Shopping, and Mercari.
-Analyze these product images and provide detailed information in JSON format, and it must be in Japanese.
+Analyze these product images and provide detailed information in JSON format, and it must be in Japanese, not foreign language.
 
 1. Title
     Your goal is to accurately generate the official or commonly used product name (正式名称)
@@ -74,6 +75,16 @@ Analyze these product images and provide detailed information in JSON format, an
 
     If the web search shows different versions, reflect those variations across the 5 outputs.
 
+    - If the detected brand name is written in a foreign language (English, French, Italian, etc.),
+    **convert for brand name in foreign language into Katakana** form that matches how it is used in Japan.
+    
+    - Example:
+        - "Chanel" → "シャネル"
+        - "Nike" → "ナイキ"
+        - "Prada" → "プラダ"
+        - "Louis Vuitton" → "ルイ・ヴィトン"
+    - Use the Katakana form consistently in all output titles.
+
     Example: [
         "アルマーニ　ダブルライダース ジャケット　L　メンズ",
         "アルマーニ　アルマーニ　ネイティブダブルライダースジャケット　L　メンズ",
@@ -87,28 +98,11 @@ Analyze these product images and provide detailed information in JSON format, an
 3. Level:
 Evaluate the generation result and assign a 生成ランク (A/B/C) score.
 
----
+Case A: If the brand and model number are accurately identified and a web search is conducted to retrieve the relevant information, ensuring the accuracy of the information.
+Case B: If the information cannot be accurately searched and is extracted solely from photos.
+Case C: If the information cannot be confirmed at all.
 
-【生成ランクの定義】
-
-A = 完全成功
-- Brand, model number, and item type are all correctly recognized.
-- The generated titles are natural and consistent with real Japanese e-commerce listings.
-- No major uncertainty; at least one title matches the official naming perfectly.
-
-B = 要確認
-- Brand recognition might be uncertain or possibly incorrect.
-- Titles are too short, lack essential elements (brand, model number, category), or seem incomplete.
-- Web search found some inconsistent or partial matches.
-
-C = 失敗
-- Could not generate meaningful titles (e.g., output is blank or only generic words like “バッグ”).
-- Brand and model number are unreadable or missing.
-- No matching results found from web search.
-
----
-
-4. Measurement: '123'
+4. Measurement
 5. Condition: '1'
 6. Shop1: '123'
 7. Shop2: '123'
@@ -128,7 +122,7 @@ Please only analyze the product and return a valid JSON object with the followin
 **DO NOT CONTAIN \`\`\`json and \`\`\` in the response, just return a valid JSON data`;
 
             const response = await this.client.chat.completions.create({
-                model: "gpt-4o",
+                model: "gpt-4.1",
                 messages: [
                     {
                         role: "user",
@@ -141,8 +135,8 @@ Please only analyze the product and return a valid JSON object with the followin
                         ]
                     }
                 ],
-                max_tokens: 1000,
-                temperature: 0.3
+                max_tokens: 2000,
+                temperature: 0.3,
             });
 
             const content = response.choices[0]?.message?.content;
@@ -183,7 +177,7 @@ Please only analyze the product and return a valid JSON object with the followin
     async testConnection(): Promise<boolean> {
         try {
             const response = await this.client.chat.completions.create({
-                model: "gpt-4o",
+                model: "gpt-4.1",
                 messages: [{ role: "user", content: "Hello" }],
                 max_tokens: 10
             });

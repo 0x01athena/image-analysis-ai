@@ -31,9 +31,6 @@ bower_components
 # Compiled binary addons (https://nodejs.org/api/addons.html)
 build/Release
 
-# Dependency directories
-jspm_packages/
-
 # TypeScript cache
 *.tsbuildinfo
 
@@ -218,9 +215,6 @@ poetry.lock
 # pdm
 .pdm.toml
 
-# PEP 582
-__pypackages__/
-
 # Celery stuff
 celerybeat-schedule
 celerybeat.pid
@@ -358,7 +352,6 @@ credentials.json
 data/
 datasets/
 *.csv
-*.json
 *.xml
 *.yaml
 *.yml
@@ -372,17 +365,3 @@ test-results/
 test-output/
 coverage/
 
-# Build artifacts
-*.o
-*.a
-*.so
-*.dylib
-*.dll
-*.exe
-
-# Package files
-*.deb
-*.rpm
-*.msi
-*.dmg
-*.pkg
