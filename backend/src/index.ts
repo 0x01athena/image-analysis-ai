@@ -9,10 +9,12 @@ import path from 'path';
 import { openAIService } from './services/OpenAIService';
 
 // Load environment variables
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+console.log(process.env.OPENAI_API_KEY, 'OPENAI_API_KEY');
+console.log(process.env.PORT, 'PORT');
 
 // Swagger configuration
 const swaggerOptions = {

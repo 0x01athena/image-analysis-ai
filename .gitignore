@@ -79,7 +79,6 @@ dist
 
 # Gatsby files
 .cache/
-public
 
 # Vuepress build output
 .vuepress/dist
@@ -118,7 +117,7 @@ frontend/.cache/
 # Backend specific
 backend/dist/
 backend/build/
-backend/uploads/
+backend/public/
 backend/.env
 backend/.env.local
 backend/.env.development.local

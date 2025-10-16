@@ -4,7 +4,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 
 // Load environment variables
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 export interface OpenAIProductAnalysis {
     title: string[];
