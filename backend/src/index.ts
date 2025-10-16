@@ -11,9 +11,6 @@ import { openAIService } from './services/OpenAIService';
 // Load environment variables
 dotenv.config();
 
-console.log(process.env.PORT, 'PORT');
-console.log(process.env.OPENAI_API_KEY, 'OPENAI_API_KEY');
-
 const app = express();
 const PORT = process.env.PORT || 5000;
 
