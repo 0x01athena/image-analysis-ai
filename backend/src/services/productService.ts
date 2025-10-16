@@ -12,6 +12,7 @@ export interface ProductData {
     managementNumber: string;
     images: string[];
     title?: string | null;
+    candidateTitles?: string[] | null;
     level?: string | null;
     measurement?: string | null;
     condition?: string | null;
@@ -76,6 +77,7 @@ export class ProductService {
                             managementNumber,
                             images: JSON.stringify(processedNewImages),
                             title: null,
+                            candidateTitles: "[]",
                             level: null,
                             measurement: null,
                             condition: null,
@@ -179,6 +181,7 @@ export class ProductService {
             };
 
             if (data.title !== undefined) updateData.title = data.title;
+            if (data.candidateTitles !== undefined) updateData.candidateTitles = JSON.stringify(data.candidateTitles);
             if (data.level !== undefined) updateData.level = data.level;
             if (data.measurement !== undefined) updateData.measurement = data.measurement;
             if (data.condition !== undefined) updateData.condition = data.condition;
@@ -331,15 +334,12 @@ export class ProductService {
                 if (existingProduct && existingProduct.managementNumber === managementNumber) {
                     // Same product, same image - this is expected, keep it
                     processedImages.push(filename);
-                    console.log(`Image ${filename} already exists for product ${managementNumber}, keeping it`);
                 } else if (existingProduct) {
                     // Different product has this image - this might be a duplicate
-                    console.log(`Warning: Image ${filename} already exists for product ${existingProduct.managementNumber}, but being uploaded for ${managementNumber}`);
                     processedImages.push(filename);
                 } else {
                     // File exists but not in database - orphaned file, keep it
                     processedImages.push(filename);
-                    console.log(`Image ${filename} exists in filesystem but not in database, keeping it`);
                 }
             } else {
                 // File doesn't exist, this shouldn't happen after upload, but handle it
@@ -369,6 +369,60 @@ export class ProductService {
         } catch (error) {
             console.error(`Error finding product for image ${imageFilename}:`, error);
             return null;
+        }
+    }
+
+    /**
+     * Select a title from candidate titles
+     */
+    async selectTitleFromCandidates(managementNumber: string, selectedTitle: string): Promise<any> {
+        try {
+            const product = await prisma.product.findUnique({
+                where: { managementNumber }
+            });
+
+            if (!product) {
+                throw new Error(`Product with management number ${managementNumber} not found`);
+            }
+
+            const candidateTitles = JSON.parse(product.candidateTitles as string || "[]");
+
+            if (!candidateTitles.includes(selectedTitle)) {
+                throw new Error(`Selected title "${selectedTitle}" is not in the candidate titles`);
+            }
+
+            const updatedProduct = await prisma.product.update({
+                where: { managementNumber },
+                data: {
+                    title: selectedTitle,
+                    updatedAt: new Date()
+                }
+            });
+
+            return updatedProduct;
+        } catch (error) {
+            console.error(`Error selecting title for product ${managementNumber}:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get candidate titles for a product
+     */
+    async getCandidateTitles(managementNumber: string): Promise<string[]> {
+        try {
+            const product = await prisma.product.findUnique({
+                where: { managementNumber }
+            });
+
+            if (!product) {
+                throw new Error(`Product with management number ${managementNumber} not found`);
+            }
+
+            return JSON.parse(product.candidateTitles as string || "[]");
+        } catch (error) {
+            console.error(`Error getting candidate titles for product ${managementNumber}:`, error);
+            throw error;
         }
     }
 

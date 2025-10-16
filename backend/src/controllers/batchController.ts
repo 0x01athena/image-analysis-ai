@@ -22,8 +22,6 @@ class BatchController {
             const uploadedFiles = req.files as Express.Multer.File[];
             const productImages: ProductImages = {};
 
-            console.log('Uploading files:', uploadedFiles.map(f => f.originalname));
-
             // Group images by product ID (extracted from filename)
             uploadedFiles.forEach(file => {
                 // Handle both regular uploads and directory uploads
@@ -36,8 +34,6 @@ class BatchController {
 
                 const productId = filename.split('_')[0];
 
-                console.log(`Processing file: ${file.originalname} -> ${filename}, Product ID: ${productId}`);
-
                 if (productId && filename.includes('_')) {
                     if (!productImages[productId]) {
                         productImages[productId] = [];
@@ -47,8 +43,6 @@ class BatchController {
                     console.log(`Skipping file ${filename} - doesn't match expected pattern`);
                 }
             });
-
-            console.log('Final product images:', productImages);
 
             // Get upload summary before saving
             const uploadSummary = await productService.getUploadSummary(productImages);
@@ -251,7 +245,8 @@ class BatchController {
             await productService.updateProductWithResults(productId, {
                 managementNumber: productId,
                 images: images,
-                title: analysis.title,
+                title: analysis.title[0] || '', // Use first title as default
+                candidateTitles: analysis.title, // Store all candidate titles
                 level: analysis.level,
                 measurement: analysis.measurement,
                 condition: analysis.condition,
@@ -264,7 +259,8 @@ class BatchController {
             return {
                 productId,
                 images,
-                title: analysis.title,
+                title: analysis.title[0] || '', // Return first title for display
+                candidateTitles: analysis.title, // Include all candidate titles
                 category: analysis.category,
                 rank: analysis.level,
                 measurements: analysis.measurement,
@@ -492,6 +488,67 @@ class BatchController {
             res.status(500).json({
                 success: false,
                 message: 'Failed to delete product',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Get candidate titles for a product
+     */
+    getCandidateTitles = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { managementNumber } = req.params;
+
+            const candidateTitles = await productService.getCandidateTitles(managementNumber);
+
+            res.status(200).json({
+                success: true,
+                data: {
+                    managementNumber,
+                    candidateTitles
+                }
+            });
+
+        } catch (error) {
+            console.error('Error getting candidate titles:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get candidate titles',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Select a title from candidate titles
+     */
+    selectTitle = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { managementNumber } = req.params;
+            const { selectedTitle } = req.body;
+
+            if (!selectedTitle) {
+                res.status(400).json({
+                    success: false,
+                    message: 'selectedTitle is required'
+                });
+                return;
+            }
+
+            const updatedProduct = await productService.selectTitleFromCandidates(managementNumber, selectedTitle);
+
+            res.status(200).json({
+                success: true,
+                message: 'Title selected successfully',
+                data: updatedProduct
+            });
+
+        } catch (error) {
+            console.error('Error selecting title:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to select title',
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
         }

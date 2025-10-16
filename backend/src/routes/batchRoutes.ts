@@ -280,6 +280,80 @@ router.get('/products', batchController.getAllProducts);
 router.get('/products/:managementNumber', batchController.getProduct);
 router.put('/products/:managementNumber', batchController.updateProduct);
 router.delete('/products/:managementNumber', batchController.deleteProduct);
+
+/**
+ * @swagger
+ * /api/batch/products/{managementNumber}/candidate-titles:
+ *   get:
+ *     summary: Get candidate titles for a product
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: managementNumber
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product management number
+ *     responses:
+ *       200:
+ *         description: Candidate titles retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     managementNumber:
+ *                       type: string
+ *                     candidateTitles:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *       404:
+ *         description: Product not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/products/:managementNumber/candidate-titles', batchController.getCandidateTitles);
+
+/**
+ * @swagger
+ * /api/batch/products/{managementNumber}/select-title:
+ *   post:
+ *     summary: Select a title from candidate titles
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: managementNumber
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product management number
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               selectedTitle:
+ *                 type: string
+ *                 description: The title to select from candidates
+ *     responses:
+ *       200:
+ *         description: Title selected successfully
+ *       400:
+ *         description: Bad request - selectedTitle required or not in candidates
+ *       404:
+ *         description: Product not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/products/:managementNumber/select-title', batchController.selectTitle);
 /**
  * @swagger
  * /api/batch/products:

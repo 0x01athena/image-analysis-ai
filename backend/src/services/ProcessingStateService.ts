@@ -14,6 +14,7 @@ export interface ProcessingResult {
     productId: string;
     images: string[];
     title: string;
+    candidateTitles?: string[];
     category: string;
     rank: 'A' | 'B' | 'C';
     measurements?: string;

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Save, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProduct, updateProduct, deleteProduct, getAllProducts } from '../../api/batchApi';
+import { getProduct, updateProduct, deleteProduct, getAllProducts, getCandidateTitles, selectTitle } from '../../api/batchApi';
 
 const ProductDetailsPage = () => {
     const { managementNumber } = useParams();
@@ -15,6 +15,8 @@ const ProductDetailsPage = () => {
     const [allProducts, setAllProducts] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [candidateTitles, setCandidateTitles] = useState([]);
+    const [showTitleSelector, setShowTitleSelector] = useState(false);
 
     const loadProduct = async () => {
         try {
@@ -27,6 +29,10 @@ const ProductDetailsPage = () => {
             const productImages = JSON.parse(productData.images || '[]');
             console.log('Loaded product images:', productImages);
             setImages(productImages);
+
+            // Parse candidate titles from JSON string
+            const candidateTitlesData = JSON.parse(productData.candidateTitles || '[]');
+            setCandidateTitles(candidateTitlesData);
 
             // Initialize form data
             setFormData({
@@ -133,6 +139,18 @@ const ProductDetailsPage = () => {
 
     const selectImage = (index) => {
         setCurrentImageIndex(index);
+    };
+
+    const handleTitleSelection = async (selectedTitle) => {
+        try {
+            await selectTitle(managementNumber, selectedTitle);
+            setFormData(prev => ({ ...prev, title: selectedTitle }));
+            setShowTitleSelector(false);
+            alert('タイトルを選択しました');
+        } catch (error) {
+            console.error('Error selecting title:', error);
+            alert('タイトルの選択に失敗しました: ' + error.message);
+        }
     };
 
     if (loading) {
@@ -291,12 +309,22 @@ const ProductDetailsPage = () => {
                         </div>
 
                         {/* Product Details Form */}
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                             {/* Generation Result */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    生成結果
-                                </label>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="block text-sm font-medium text-gray-700">
+                                        生成結果
+                                    </label>
+                                    {candidateTitles.length > 1 && (
+                                        <button
+                                            onClick={() => setShowTitleSelector(true)}
+                                            className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors duration-300"
+                                        >
+                                            候補から選択
+                                        </button>
+                                    )}
+                                </div>
                                 <textarea
                                     value={formData.title}
                                     onChange={(e) => handleInputChange('title', e.target.value)}
@@ -304,6 +332,11 @@ const ProductDetailsPage = () => {
                                     rows={3}
                                     placeholder="商品タイトル"
                                 />
+                                {candidateTitles.length > 1 && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        AIが生成した{candidateTitles.length}個の候補があります
+                                    </p>
+                                )}
                             </div>
 
                             {/* Generation Rank */}
@@ -404,6 +437,66 @@ const ProductDetailsPage = () => {
                         </div>
                     </div>
                 </motion.div>
+
+                {/* Title Selection Modal */}
+                {showTitleSelector && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="bg-white rounded-2xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-semibold text-gray-900">AI生成タイトル候補</h3>
+                                <button
+                                    onClick={() => setShowTitleSelector(false)}
+                                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-300"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-3">
+                                {candidateTitles.map((title, index) => (
+                                    <div
+                                        key={index}
+                                        className={`p-4 border rounded-lg cursor-pointer transition-all duration-300 ${title === formData.title
+                                                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                            }`}
+                                        onClick={() => handleTitleSelection(title)}
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-sm font-medium text-gray-600">
+                                                        候補{index + 1}
+                                                    </span>
+                                                    {title === formData.title && (
+                                                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                                            選択中
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-gray-900 leading-relaxed">{title}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-6 flex justify-end gap-3">
+                                <button
+                                    onClick={() => setShowTitleSelector(false)}
+                                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-300"
+                                >
+                                    キャンセル
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
             </div>
         </div>
     );

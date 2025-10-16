@@ -110,6 +110,43 @@ export const deleteProduct = async (managementNumber) => {
     return response.json();
 };
 
+/**
+ * Get candidate titles for a product
+ * @param {string} managementNumber - Product management number
+ * @returns {Promise<Object>} Candidate titles
+ */
+export const getCandidateTitles = async (managementNumber) => {
+    const response = await fetch(`${API_BASE_URL}/batch/products/${managementNumber}/candidate-titles`);
+
+    if (!response.ok) {
+        throw new Error(`Failed to get candidate titles: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
+/**
+ * Select a title from candidate titles
+ * @param {string} managementNumber - Product management number
+ * @param {string} selectedTitle - Selected title
+ * @returns {Promise<Object>} Updated product
+ */
+export const selectTitle = async (managementNumber, selectedTitle) => {
+    const response = await fetch(`${API_BASE_URL}/batch/products/${managementNumber}/select-title`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ selectedTitle })
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to select title: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
 export const deleteMultipleProducts = async (managementNumbers) => {
     const response = await fetch(`${API_BASE_URL}/batch/products`, {
         method: 'DELETE',

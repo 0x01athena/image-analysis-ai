@@ -12,7 +12,7 @@ if (envLoaded.error) {
 }
 
 export interface OpenAIProductAnalysis {
-    title: string;
+    title: string[];
     category: string;
     level: 'A' | 'B' | 'C';
     measurement?: string;
@@ -52,30 +52,80 @@ export class OpenAIService {
             );
 
             const prompt = `
-            Analyze these product images and provide detailed information in JSON format. 
-            
-            Guidelines:
-            - Title should be descriptive and appealing for e-commerce
-            - Category should be specific (e.g., "電子機器", "家具", "衣類", etc.)
-            - Level A: High-quality products with detailed titles
-            - Level B: Medium-quality products with shorter titles
-            - Level C: Products that need improvement or have issues
-            - Measurements should include dimensions if visible
-            - Condition should assess wear, damage, or quality
-            - Shop recommendations should be relevant Japanese e-commerce platforms
+You are an expert in Japanese e-commerce cataloging and product title generation for online stores like Rakuten, Yahoo! Shopping, and Mercari.
+Analyze these product images and provide detailed information in JSON format, and it must be in Japanese.
 
-            Please only analyze the product and return a valid JSON object with the following structure:
-            {
-                "title": "Detailed product title in Japanese (商品タイトル)",
-                "category": "Product category in Japanese (カテゴリ)",
-                "level": "A" or "B" or "C" (A=high quality/long title, B=medium quality/short title, C=low quality/needs improvement),
-                "measurement": "Product measurements if visible (寸法)",
-                "condition": "Product condition assessment (状態)",
-                "shop1": "Primary shop recommendation (店舗1)",
-                "shop2": "Secondary shop recommendation (店舗2)",
-                "shop3": "Tertiary shop recommendation (店舗3)"
-            }
-            **DO NOT CONTAIN \`\`\`json and \`\`\` in the response, just return a valid JSON data`;
+1. Title
+    Your goal is to accurately generate the official or commonly used product name (正式名称)
+    based on the brand tag, model number, and product image.
+
+    You must use:
+    - Visual analysis to detect and read brand, model number, and category.
+    - Web search (brand + model number) to verify or refine the product name.
+    - Visual matching to confirm that search results align with the image (color, material, type).
+    - Generate at least 5 possible product titles in Japanese, ranked by confidence.
+
+    Each title must:
+    - Follow standard e-commerce naming conventions used in Japan (Rakuten, ZOZOTOWN, etc.).
+    - Be natural and factual — no extra adjectives or speculation.
+    - Include the brand, product/series name, model number, material/color/size if visible, and category.
+    - Be between 40–80 Japanese characters for balance.
+    - Avoid “写真の通り” or uncertain terms like “っぽい”.
+
+    If the web search shows different versions, reflect those variations across the 5 outputs.
+
+    Example: [
+        "アルマーニ　ダブルライダース ジャケット　L　メンズ",
+        "アルマーニ　アルマーニ　ネイティブダブルライダースジャケット　L　メンズ",
+        "アルマーニ　アルマーニ　ヴィンテージ風ダブルライダースジャケット　L　メンズ",
+        "アルマーニ　アルマーニ　ワイドダブルライダースジャケット　L　メンズ",
+        "アルマーニ　アルマーニ　ステッチダブルライダースジャケット　L　メンズ",
+        "アルマーニ　アルマーニ　レザージャケットジャケット　L　メンズ"
+    ]
+
+2. Category: '123'
+3. Level:
+Evaluate the generation result and assign a 生成ランク (A/B/C) score.
+
+---
+
+【生成ランクの定義】
+
+A = 完全成功
+- Brand, model number, and item type are all correctly recognized.
+- The generated titles are natural and consistent with real Japanese e-commerce listings.
+- No major uncertainty; at least one title matches the official naming perfectly.
+
+B = 要確認
+- Brand recognition might be uncertain or possibly incorrect.
+- Titles are too short, lack essential elements (brand, model number, category), or seem incomplete.
+- Web search found some inconsistent or partial matches.
+
+C = 失敗
+- Could not generate meaningful titles (e.g., output is blank or only generic words like “バッグ”).
+- Brand and model number are unreadable or missing.
+- No matching results found from web search.
+
+---
+
+4. Measurement: '123'
+5. Condition: '1'
+6. Shop1: '123'
+7. Shop2: '123'
+8. Shop3: '123'
+
+Please only analyze the product and return a valid JSON object with the following structure:
+{
+    "title": [],
+    "level",
+    "measurement",
+    "category",
+    "condition",
+    "shop1",
+    "shop2",
+    "shop3"
+}
+**DO NOT CONTAIN \`\`\`json and \`\`\` in the response, just return a valid JSON data`;
 
             const response = await this.client.chat.completions.create({
                 model: "gpt-4o",
@@ -96,7 +146,6 @@ export class OpenAIService {
             });
 
             const content = response.choices[0]?.message?.content;
-            console.log('openai content', content);
             if (!content) {
                 throw new Error('No response from OpenAI');
             }
@@ -105,7 +154,7 @@ export class OpenAIService {
             const analysis = JSON.parse(content) as OpenAIProductAnalysis;
 
             // Validate required fields
-            if (!analysis.title || !analysis.category || !analysis.level) {
+            if (!analysis.title || !Array.isArray(analysis.title) || analysis.title.length === 0 || !analysis.category || !analysis.level) {
                 throw new Error('Invalid response format from OpenAI');
             }
 
@@ -116,14 +165,14 @@ export class OpenAIService {
 
             // Return default values if OpenAI fails
             return {
-                title: `商品 ${productId}`,
-                category: '未分類',
+                title: [''],
+                category: '',
                 level: 'C',
-                measurement: '測定不可',
-                condition: '状態不明',
-                shop1: '推奨店舗1',
-                shop2: '推奨店舗2',
-                shop3: '推奨店舗3'
+                measurement: '',
+                condition: '',
+                shop1: '',
+                shop2: '',
+                shop3: ''
             };
         }
     }
