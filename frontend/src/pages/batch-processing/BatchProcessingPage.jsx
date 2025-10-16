@@ -8,6 +8,8 @@ const BatchProcessingPage = () => {
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [sessionId, setSessionId] = useState(null);
+    const [uploadSummary, setUploadSummary] = useState(null);
     const fileInputRef = useRef(null);
 
     const handleDirectorySelect = () => {
@@ -41,11 +43,19 @@ const BatchProcessingPage = () => {
             const uploadResult = await uploadDirectoryImages(selectedFiles);
             console.log('Upload result:', uploadResult);
 
+            // Store the sessionId from upload response
+            if (uploadResult.success && uploadResult.data.sessionId) {
+                setSessionId(uploadResult.data.sessionId);
+                setUploadSummary(uploadResult.data.uploadSummary);
+            } else {
+                throw new Error('No session ID received from upload');
+            }
+
             setIsUploading(false);
             setIsProcessing(true);
 
-            // Start batch processing using API function
-            const processingResult = await startBatchProcessing();
+            // Start batch processing using API function with sessionId
+            const processingResult = await startBatchProcessing(uploadResult.data.sessionId);
             console.log('Processing started:', processingResult);
 
             setIsProcessing(false);
@@ -121,6 +131,58 @@ const BatchProcessingPage = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* Upload Summary Section */}
+                    {uploadSummary && (
+                        <div className="mb-8">
+                            <h2 className="text-lg font-semibold text-gray-900 mb-4">アップロード結果</h2>
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                                    <div className="text-center">
+                                        <div className="text-2xl font-bold text-blue-600">{uploadSummary.newProducts}</div>
+                                        <div className="text-sm text-blue-800">新規商品</div>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-2xl font-bold text-green-600">{uploadSummary.updatedProducts}</div>
+                                        <div className="text-sm text-green-800">更新商品</div>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-2xl font-bold text-purple-600">{uploadSummary.newImages}</div>
+                                        <div className="text-sm text-purple-800">新規画像</div>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-2xl font-bold text-orange-600">{uploadSummary.duplicateImages}</div>
+                                        <div className="text-sm text-orange-800">重複画像</div>
+                                    </div>
+                                </div>
+
+                                {uploadSummary.details.length > 0 && (
+                                    <div className="mt-4">
+                                        <h3 className="font-semibold text-gray-800 mb-2">詳細情報</h3>
+                                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                                            {uploadSummary.details.map((detail, index) => (
+                                                <div key={index} className="flex justify-between items-center text-sm bg-white p-2 rounded">
+                                                    <span className="font-medium">{detail.managementNumber}</span>
+                                                    <div className="flex gap-4 text-xs">
+                                                        <span className={`px-2 py-1 rounded ${detail.status === 'new' ? 'bg-green-100 text-green-800' :
+                                                            detail.status === 'updated' ? 'bg-blue-100 text-blue-800' :
+                                                                'bg-gray-100 text-gray-800'
+                                                            }`}>
+                                                            {detail.status === 'new' ? '新規' :
+                                                                detail.status === 'updated' ? '更新' : '変更なし'}
+                                                        </span>
+                                                        <span>既存: {detail.existingImages}</span>
+                                                        <span>新規: {detail.newImages}</span>
+                                                        <span>重複: {detail.duplicates}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Rank System Section */}
                     <div className="mb-8">

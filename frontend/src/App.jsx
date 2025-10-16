@@ -4,7 +4,8 @@ import Navigation from './components/Navigation';
 import LandingPage from './pages/landing/LandingPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import BatchProcessingPage from './pages/batch-processing/BatchProcessingPage';
-import ResultsPage from './pages/results/ResultsPage';
+import ProductsViewPage from './pages/products/ProductsViewPage';
+import ProductDetailsPage from './pages/products/ProductDetailsPage';
 import "./App.css";
 
 function App() {
@@ -17,7 +18,8 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/batch-processing" element={<BatchProcessingPage />} />
-            <Route path="/results" element={<ResultsPage />} />
+            <Route path="/products" element={<ProductsViewPage />} />
+            <Route path="/products/:managementNumber" element={<ProductDetailsPage />} />
           </Routes>
         </div>
       </div>

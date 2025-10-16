@@ -22,7 +22,7 @@ const LandingPage = () => {
                     <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
                         株式会社PLAYER
                     </p>
-                    <Link to="/settings">
+                    <Link to="/batch-processing">
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}

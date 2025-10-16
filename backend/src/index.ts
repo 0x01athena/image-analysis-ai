@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import path from 'path';
+import { openAIService } from './services/OpenAIService';
 
 // Load environment variables
 dotenv.config();
@@ -64,6 +65,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/public', express.static(path.join(__dirname, '../public')));
 
 // Swagger documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
@@ -73,13 +75,30 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
 }));
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-    res.status(200).json({
-        success: true,
-        message: 'Server is running',
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'development',
-    });
+app.get('/health', async (req, res) => {
+    try {
+        const openAIConnected = await openAIService.testConnection();
+
+        res.status(200).json({
+            success: true,
+            message: 'Server is running',
+            timestamp: new Date().toISOString(),
+            environment: process.env.NODE_ENV || 'development',
+            services: {
+                openai: openAIConnected ? 'connected' : 'disconnected'
+            }
+        });
+    } catch (error) {
+        res.status(200).json({
+            success: true,
+            message: 'Server is running',
+            timestamp: new Date().toISOString(),
+            environment: process.env.NODE_ENV || 'development',
+            services: {
+                openai: 'error'
+            }
+        });
+    }
 });
 
 // API routes

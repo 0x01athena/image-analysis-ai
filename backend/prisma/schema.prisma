@@ -17,6 +17,7 @@ model Product {
   id               String   @id @default(cuid())
   managementNumber String   @unique
   title            String?
+  candidateTitles  String   @default("[]") // JSON string for SQLite compatibility
   level            String?
   measurement      String?
   condition        String?
