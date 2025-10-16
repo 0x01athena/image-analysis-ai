@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { productService, ProductImages } from '../services/';
+import { productService, ProductImages } from '../services/ProductService';
 import { processingStateService, ProcessingResult } from '../services/ProcessingStateService';
 import { openAIService, OpenAIProductAnalysis } from '../services/OpenAIService';
 

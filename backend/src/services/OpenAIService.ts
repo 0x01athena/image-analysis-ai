@@ -4,12 +4,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 
 // Load environment variables
-const envPath = path.join(__dirname, '../../.env');
-const envLoaded = dotenv.config({ path: envPath });
-
-if (envLoaded.error) {
-    console.warn('⚠️  OpenAIService: Could not load .env file:', envLoaded.error.message);
-}
+dotenv.config();
 
 export interface OpenAIProductAnalysis {
     title: string[];
@@ -28,7 +23,7 @@ export class OpenAIService {
     constructor() {
         this.client = new OpenAI({
             apiKey: process.env.OPENAI_API_KEY || '',
-            timeout: 30000000
+            timeout: 120000
         });
     }
 
@@ -177,7 +172,7 @@ Please only analyze the product and return a valid JSON object with the followin
     async testConnection(): Promise<boolean> {
         try {
             const response = await this.client.chat.completions.create({
-                model: "gpt-4o",
+                model: "gpt-4.1",
                 messages: [{ role: "user", content: "Hello" }],
                 max_tokens: 10
             });

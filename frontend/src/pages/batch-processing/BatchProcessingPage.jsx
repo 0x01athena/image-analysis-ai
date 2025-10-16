@@ -165,8 +165,7 @@ const BatchProcessingPage = () => {
                                                     <span className="font-medium">{detail.managementNumber}</span>
                                                     <div className="flex gap-4 text-xs">
                                                         <span className={`px-2 py-1 rounded ${detail.status === 'new' ? 'bg-green-100 text-green-800' :
-                                                            detail.status === 'updated' ? 'bg-blue-100 text-blue-800' :
-                                                                'bg-gray-100 text-gray-800'
+                                                            detail.status === 'updated' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
                                                             }`}>
                                                             {detail.status === 'new' ? '新規' :
                                                                 detail.status === 'updated' ? '更新' : '変更なし'}
