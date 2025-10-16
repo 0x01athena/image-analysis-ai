@@ -4,12 +4,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 
 // Load environment variables
-const envPath = path.join(__dirname, '../../.env');
-const envLoaded = dotenv.config({ path: envPath });
-
-if (envLoaded.error) {
-    console.warn('⚠️  OpenAIService: Could not load .env file:', envLoaded.error.message);
-}
+dotenv.config();
 
 export interface OpenAIProductAnalysis {
     title: string[];
