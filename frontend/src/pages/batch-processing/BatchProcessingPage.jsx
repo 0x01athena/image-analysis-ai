@@ -12,6 +12,7 @@ const BatchProcessingPage = () => {
     const [sessionId, setSessionId] = useState(null);
     const [uploadSummary, setUploadSummary] = useState(null);
     const [skippedFiles, setSkippedFiles] = useState([]);
+    const [fileError, setFileError] = useState(null);
     const fileInputRef = useRef(null);
 
     // Use the task status hook for periodic polling - no initial sessionId needed
@@ -29,7 +30,39 @@ const BatchProcessingPage = () => {
 
     const handleFileSelection = (event) => {
         const files = Array.from(event.target.files);
-        setSelectedFiles(files);
+
+        // Clear any previous errors
+        setFileError(null);
+
+        // File size limit: 1MB (1 * 1024 * 1024 bytes)
+        const maxFileSize = 1 * 1024 * 1024;
+        const oversizedFiles = files.filter(file => file.size > maxFileSize);
+
+        if (oversizedFiles.length > 0) {
+            // Extract product IDs from oversized files
+            const oversizedProducts = [...new Set(oversizedFiles.map(file => {
+                const filename = file.name;
+                if (filename.includes('_')) {
+                    return filename.split('_')[0];
+                }
+                return filename;
+            }))];
+
+            const productList = oversizedProducts.join(', ');
+            setFileError(`以下の商品のファイルが1MBのサイズ制限を超えています: ${productList}. これらの商品はスキップされます。`);
+
+            // Filter out oversized files
+            const validFiles = files.filter(file => file.size <= maxFileSize);
+            setSelectedFiles(validFiles);
+
+            if (validFiles.length === 0) {
+                setFileError('すべてのファイルがサイズ制限を超えています。1MB以下のファイルを選択してください。');
+                setSelectedFiles([]); // Clear selected files if all are oversized
+                return;
+            }
+        } else {
+            setSelectedFiles(files);
+        }
 
         // Extract directory path from first file
         if (files.length > 0) {
@@ -295,6 +328,16 @@ const BatchProcessingPage = () => {
                     <div className={`mb-8 ${isInterfaceDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
                         <h2 className="text-lg font-semibold text-gray-900 mb-4">画像ディレクトリ選択</h2>
                         <p className="text-sm text-gray-600 mb-2">商品画像が保存されているフォルダを選択してください</p>
+                        <p className="text-xs text-orange-600 mb-4 bg-orange-50 px-3 py-2 rounded-lg border border-orange-200">
+                            ⚠️ ファイルサイズ制限: 各画像ファイルは1MB以下である必要があります
+                        </p>
+
+                        {/* File Error Display */}
+                        {fileError && (
+                            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                <p className="text-sm text-red-600">{fileError}</p>
+                            </div>
+                        )}
 
                         <div className="flex gap-3 mb-4">
                             <input

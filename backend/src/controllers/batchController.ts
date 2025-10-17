@@ -11,10 +11,17 @@ class BatchController {
      */
     uploadDirectoryImages = async (req: Request, res: Response): Promise<void> => {
         try {
+            // Handle upload errors from middleware (e.g., file size limits)
+            const uploadErrors = (req as any).uploadErrors;
+            if (uploadErrors && uploadErrors.length > 0) {
+                console.log('Upload errors detected:', uploadErrors);
+            }
+
             if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
                 res.status(400).json({
                     success: false,
-                    message: 'No images provided'
+                    message: 'No images provided',
+                    uploadErrors: uploadErrors || []
                 });
                 return;
             }
@@ -22,7 +29,7 @@ class BatchController {
             const uploadedFiles = req.files as Express.Multer.File[];
             const productImages: ProductImages = {};
             const skippedFiles: Array<{ filename: string, reason: string, size?: number }> = [];
-            const MAX_FILE_SIZE = 1 * 1024 * 1024; // 5MB
+            const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
 
             // Group images by product ID (extracted from filename) and check file sizes
             uploadedFiles.forEach(file => {
@@ -33,7 +40,7 @@ class BatchController {
                         reason: 'File too large',
                         size: file.size
                     });
-                    console.log(`Skipping file ${file.originalname} - size ${file.size} exceeds 5MB limit`);
+                    console.log(`Skipping file ${file.originalname} - size ${file.size} exceeds 1MB limit`);
                     return; // Skip this file
                 }
 
@@ -101,6 +108,7 @@ class BatchController {
                     totalProducts,
                     savedProducts,
                     skippedFiles: skippedFiles.length > 0 ? skippedFiles : undefined,
+                    uploadErrors: uploadErrors || [],
                     uploadSummary: {
                         newProducts: uploadSummary.newProducts,
                         updatedProducts: uploadSummary.updatedProducts,

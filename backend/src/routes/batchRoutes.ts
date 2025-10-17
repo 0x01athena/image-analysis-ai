@@ -21,23 +21,7 @@ const storage = multer.diskStorage({
     }
 });
 
-const upload = multer({
-    storage: storage,
-    fileFilter: (req, file, cb) => {
-        const allowedTypes = /jpeg|jpg|png|gif|bmp|webp/;
-        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-        const mimetype = allowedTypes.test(file.mimetype);
 
-        if (mimetype && extname) {
-            return cb(null, true);
-        } else {
-            cb(new Error('Only image files are allowed'));
-        }
-    },
-    limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB limit per file
-    }
-});
 
 /**
  * @swagger
@@ -65,9 +49,12 @@ const upload = multer({
  *       500:
  *         description: Server error
  */
-// Alternative approach: Remove file size limit and handle in controller
-const uploadWithoutSizeLimit = multer({
+
+const upload = multer({
     storage: storage,
+    limits: {
+        fileSize: 1 * 1024 * 1024, // 1MB limit
+    },
     fileFilter: (req, file, cb) => {
         const allowedTypes = /jpeg|jpg|png|gif|bmp|webp/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -78,11 +65,34 @@ const uploadWithoutSizeLimit = multer({
         } else {
             cb(new Error('Only image files are allowed'));
         }
-    }
-    // Removed fileSize limit to handle in controller
+    },
 });
 
-router.post('/upload-directory', uploadWithoutSizeLimit.array('images', 5000), batchController.uploadDirectoryImages);
+// Custom middleware to handle file size errors gracefully
+const handleUploadWithSizeCheck = (req: any, res: any, next: any) => {
+    const uploadHandler = upload.array('images', 5000);
+
+    uploadHandler(req, res, (err) => {
+        if (err) {
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                // File too large - continue with empty files array
+                req.files = [];
+                req.uploadErrors = req.uploadErrors || [];
+                req.uploadErrors.push({
+                    type: 'FILE_TOO_LARGE',
+                    message: 'One or more files exceed the 1MB size limit',
+                    filename: err.fieldname
+                });
+                return next();
+            } else {
+                return next(err);
+            }
+        }
+        next();
+    });
+};
+
+router.post('/upload-directory', handleUploadWithSizeCheck, batchController.uploadDirectoryImages);
 
 /**
  * @swagger
