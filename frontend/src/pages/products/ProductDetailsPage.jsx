@@ -103,18 +103,17 @@ const ProductDetailsPage = () => {
         if (e.key === 'Tab') {
             e.preventDefault();
 
-            // Find next product with same date and rank
+            // Find next product with same date (regardless of level)
             const currentProduct = allProducts[currentIndex];
             if (!currentProduct) return;
 
-            const sameDateAndRank = allProducts.filter(p =>
-                new Date(p.createdAt).toDateString() === new Date(currentProduct.createdAt).toDateString() &&
-                p.level === currentProduct.level
+            const sameDate = allProducts.filter(p =>
+                new Date(p.createdAt).toDateString() === new Date(currentProduct.createdAt).toDateString()
             );
 
-            const currentInFiltered = sameDateAndRank.findIndex(p => p.managementNumber === managementNumber);
-            const nextIndex = (currentInFiltered + 1) % sameDateAndRank.length;
-            const nextProduct = sameDateAndRank[nextIndex];
+            const currentInFiltered = sameDate.findIndex(p => p.managementNumber === managementNumber);
+            const nextIndex = (currentInFiltered + 1) % sameDate.length;
+            const nextProduct = sameDate[nextIndex];
 
             if (nextProduct && nextProduct.managementNumber !== managementNumber) {
                 navigate(`/products/${nextProduct.managementNumber}`);

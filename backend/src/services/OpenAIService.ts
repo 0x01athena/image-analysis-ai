@@ -80,6 +80,11 @@ Analyze these product images and provide detailed information in JSON format, an
         - "Louis Vuitton" → "ルイ・ヴィトン"
     - Use the Katakana form consistently in all output titles.
 
+    - Color:
+        - Always append "系" after the detected color name.
+        - Example: ブラック → ブラック系, ブルー → ブルー系, ベージュ → ベージュ系.
+        - If the detected color name already ends with "系", do not duplicate it (e.g., "ブラック系系" → "ブラック系").
+
     Example: [
         "アルマーニ　ダブルライダース ジャケット　L　メンズ",
         "アルマーニ　アルマーニ　ネイティブダブルライダースジャケット　L　メンズ",
