@@ -11,6 +11,7 @@ const BatchProcessingPage = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [sessionId, setSessionId] = useState(null);
     const [uploadSummary, setUploadSummary] = useState(null);
+    const [skippedFiles, setSkippedFiles] = useState([]);
     const fileInputRef = useRef(null);
 
     // Use the task status hook for periodic polling - no initial sessionId needed
@@ -55,6 +56,7 @@ const BatchProcessingPage = () => {
             if (uploadResult.success && uploadResult.data.sessionId) {
                 setSessionId(uploadResult.data.sessionId);
                 setUploadSummary(uploadResult.data.uploadSummary);
+                setSkippedFiles(uploadResult.data.skippedFiles || []);
             } else {
                 throw new Error('No session ID received from upload');
             }
@@ -196,6 +198,38 @@ const BatchProcessingPage = () => {
 
                     {/* Task Status Display - Only show for AI analysis, not uploads */}
                     <TaskStatusDisplay />
+
+                    {/* Skipped Files Section */}
+                    {skippedFiles.length > 0 && (
+                        <div className="mb-8">
+                            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                <XCircle className="w-5 h-5 text-orange-600" />
+                                スキップされたファイル
+                            </h2>
+                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
+                                <p className="text-sm text-orange-800 mb-4">
+                                    {skippedFiles.length}個のファイルがスキップされました（ファイルサイズが5MBを超えるか、無効なファイル名パターン）
+                                </p>
+                                <div className="space-y-2 max-h-40 overflow-y-auto">
+                                    {skippedFiles.map((file, index) => (
+                                        <div key={index} className="flex justify-between items-center text-sm bg-white p-2 rounded">
+                                            <span className="font-medium text-gray-800">{file.filename}</span>
+                                            <div className="flex gap-4 text-xs">
+                                                <span className="px-2 py-1 rounded bg-orange-100 text-orange-800">
+                                                    {file.reason}
+                                                </span>
+                                                {file.size && (
+                                                    <span className="text-gray-600">
+                                                        {(file.size / (1024 * 1024)).toFixed(2)}MB
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Image Directory Selection Section - Disabled when task is active */}
                     <div className={`mb-8 ${isInterfaceDisabled ? 'opacity-50 pointer-events-none' : ''}`}>

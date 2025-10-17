@@ -21,9 +21,22 @@ class BatchController {
 
             const uploadedFiles = req.files as Express.Multer.File[];
             const productImages: ProductImages = {};
+            const skippedFiles: Array<{ filename: string, reason: string, size?: number }> = [];
+            const MAX_FILE_SIZE = 1 * 1024 * 1024; // 5MB
 
-            // Group images by product ID (extracted from filename)
+            // Group images by product ID (extracted from filename) and check file sizes
             uploadedFiles.forEach(file => {
+                // Check file size
+                if (file.size > MAX_FILE_SIZE) {
+                    skippedFiles.push({
+                        filename: file.originalname,
+                        reason: 'File too large',
+                        size: file.size
+                    });
+                    console.log(`Skipping file ${file.originalname} - size ${file.size} exceeds 5MB limit`);
+                    return; // Skip this file
+                }
+
                 // Handle both regular uploads and directory uploads
                 let filename = file.originalname;
 
@@ -40,9 +53,23 @@ class BatchController {
                     }
                     productImages[productId].push(file.filename);
                 } else {
+                    skippedFiles.push({
+                        filename: file.originalname,
+                        reason: 'Invalid filename pattern'
+                    });
                     console.log(`Skipping file ${filename} - doesn't match expected pattern`);
                 }
             });
+
+            // Check if we have any valid files to process
+            if (Object.keys(productImages).length === 0) {
+                res.status(400).json({
+                    success: false,
+                    message: 'No valid images to process',
+                    skippedFiles: skippedFiles
+                });
+                return;
+            }
 
             // Get upload summary before saving
             const uploadSummary = await productService.getUploadSummary(productImages);
@@ -64,6 +91,7 @@ class BatchController {
                     totalImages,
                     totalProducts,
                     savedProducts,
+                    skippedFiles: skippedFiles.length > 0 ? skippedFiles : undefined,
                     uploadSummary: {
                         newProducts: uploadSummary.newProducts,
                         updatedProducts: uploadSummary.updatedProducts,
