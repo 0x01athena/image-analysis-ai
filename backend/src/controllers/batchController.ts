@@ -362,6 +362,42 @@ class BatchController {
     };
 
     /**
+     * Get all active processing sessions
+     */
+    getActiveSessions = async (req: Request, res: Response): Promise<void> => {
+        try {
+            // Clean up completed sessions first
+            const cleanedCount = processingStateService.cleanupCompletedSessions();
+            if (cleanedCount > 0) {
+                console.log(`Cleaned up ${cleanedCount} completed sessions`);
+            }
+
+            const sessions = processingStateService.getAllSessions();
+
+            // Filter only sessions that are currently processing
+            const activeSessions = sessions
+                .filter(session => session.processingStatus.isProcessing)
+                .map(session => ({
+                    sessionId: session.sessionId,
+                    processingStatus: session.processingStatus
+                }));
+
+            res.status(200).json({
+                success: true,
+                data: activeSessions
+            });
+
+        } catch (error) {
+            console.error('Error getting active sessions:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get active sessions',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
      * Get all products with pagination and filtering
      */
     getAllProducts = async (req: Request, res: Response): Promise<void> => {

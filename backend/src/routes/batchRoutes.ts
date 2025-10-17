@@ -118,6 +118,36 @@ router.get('/status/:sessionId', batchController.getProcessingStatus);
 
 /**
  * @swagger
+ * /api/batch/active-sessions:
+ *   get:
+ *     summary: Get all active processing sessions
+ *     tags: [Batch Processing]
+ *     responses:
+ *       200:
+ *         description: Active sessions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       sessionId:
+ *                         type: string
+ *                       processingStatus:
+ *                         type: object
+ *       500:
+ *         description: Server error
+ */
+router.get('/active-sessions', batchController.getActiveSessions);
+
+/**
+ * @swagger
  * /api/batch/results/{sessionId}:
  *   get:
  *     summary: Get processing results for a session

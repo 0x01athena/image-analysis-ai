@@ -8,6 +8,11 @@ export interface ProcessingStatus {
     failedProducts: number;
     startTime: Date | null;
     estimatedCompletion: Date | null;
+    rankDistribution: {
+        A: number;
+        B: number;
+        C: number;
+    };
 }
 
 export interface ProcessingResult {
@@ -51,7 +56,12 @@ export class ProcessingStateService {
                 processedProducts: 0,
                 failedProducts: 0,
                 startTime: null,
-                estimatedCompletion: null
+                estimatedCompletion: null,
+                rankDistribution: {
+                    A: 0,
+                    B: 0,
+                    C: 0
+                }
             },
             processingResults: [],
             createdAt: new Date()
@@ -98,7 +108,29 @@ export class ProcessingStateService {
         if (!session) return false;
 
         session.processingResults.push(result);
+
+        // Update rank distribution
+        this.updateRankDistribution(sessionId);
+
         return true;
+    }
+
+    /**
+     * Update rank distribution based on processing results
+     */
+    private updateRankDistribution(sessionId: string): void {
+        const session = this.getSession(sessionId);
+        if (!session) return;
+
+        const distribution = { A: 0, B: 0, C: 0 };
+
+        session.processingResults.forEach(result => {
+            if (result.rank === 'A') distribution.A++;
+            else if (result.rank === 'B') distribution.B++;
+            else if (result.rank === 'C') distribution.C++;
+        });
+
+        session.processingStatus.rankDistribution = distribution;
     }
 
     /**
@@ -149,6 +181,20 @@ export class ProcessingStateService {
                 this.sessions.delete(sessionId);
             }
         }
+    }
+
+    /**
+     * Clean up completed sessions (sessions that are no longer processing)
+     */
+    cleanupCompletedSessions(): number {
+        let cleanedCount = 0;
+        for (const [sessionId, session] of this.sessions.entries()) {
+            if (!session.processingStatus.isProcessing) {
+                this.sessions.delete(sessionId);
+                cleanedCount++;
+            }
+        }
+        return cleanedCount;
     }
 }
 

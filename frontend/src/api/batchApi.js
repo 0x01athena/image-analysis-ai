@@ -163,3 +163,35 @@ export const deleteMultipleProducts = async (managementNumbers) => {
 
     return response.json();
 };
+
+/**
+ * Get processing status for a session
+ * @param {string} sessionId - Session ID
+ * @returns {Promise<Object>} Processing status
+ */
+export const getProcessingStatus = async (sessionId) => {
+    const response = await fetch(`${API_BASE_URL}/batch/status/${sessionId}`);
+
+    if (!response.ok) {
+        if (response.status === 404) {
+            return null; // Session not found or expired
+        }
+        throw new Error(`Failed to get processing status: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
+/**
+ * Get all active processing sessions
+ * @returns {Promise<Object>} Active sessions
+ */
+export const getActiveSessions = async () => {
+    const response = await fetch(`${API_BASE_URL}/batch/active-sessions`);
+
+    if (!response.ok) {
+        throw new Error(`Failed to get active sessions: ${response.statusText}`);
+    }
+
+    return response.json();
+};
