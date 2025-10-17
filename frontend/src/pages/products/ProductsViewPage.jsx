@@ -115,7 +115,7 @@ const ProductsViewPage = () => {
 
         return (
             <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${colors[rank] || colors['C']}`}>
-                ランク{rank}
+                {rank ? `ランク ${rank}` : '未設定'}
             </span>
         );
     };
