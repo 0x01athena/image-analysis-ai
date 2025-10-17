@@ -13,6 +13,13 @@ export interface ProcessingStatus {
         B: number;
         C: number;
     };
+    uploadStatus: {
+        isUploading: boolean;
+        totalFiles: number;
+        uploadedFiles: number;
+        skippedFiles: number;
+        uploadProgress: number;
+    };
 }
 
 export interface ProcessingResult {
@@ -61,6 +68,13 @@ export class ProcessingStateService {
                     A: 0,
                     B: 0,
                     C: 0
+                },
+                uploadStatus: {
+                    isUploading: false,
+                    totalFiles: 0,
+                    uploadedFiles: 0,
+                    skippedFiles: 0,
+                    uploadProgress: 0
                 }
             },
             processingResults: [],
@@ -97,6 +111,17 @@ export class ProcessingStateService {
         if (!session) return false;
 
         session.processingStatus = { ...session.processingStatus, ...status };
+        return true;
+    }
+
+    /**
+     * Update upload status for a session
+     */
+    updateUploadStatus(sessionId: string, uploadStatus: Partial<ProcessingStatus['uploadStatus']>): boolean {
+        const session = this.getSession(sessionId);
+        if (!session) return false;
+
+        session.processingStatus.uploadStatus = { ...session.processingStatus.uploadStatus, ...uploadStatus };
         return true;
     }
 

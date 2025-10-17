@@ -17,9 +17,11 @@ const BatchProcessingPage = () => {
     // Use the task status hook for periodic polling - no initial sessionId needed
     const { taskStatus, isPolling, error, startPolling } = useTaskStatus();
 
-    // Check if there's an active task (AI analysis in progress)
-    const hasActiveTask = taskStatus && taskStatus.isProcessing;
-    const isInterfaceDisabled = hasActiveTask || isUploading || isProcessing;
+    // Check if there's an active task (upload or AI analysis in progress)
+    const hasActiveTask = taskStatus && (taskStatus.isProcessing || (taskStatus.uploadStatus && taskStatus.uploadStatus.isUploading));
+    // Also check if we have a sessionId but no taskStatus yet (during upload)
+    const hasActiveSession = sessionId && !taskStatus;
+    const isInterfaceDisabled = hasActiveTask || hasActiveSession || isUploading || isProcessing;
 
     const handleDirectorySelect = () => {
         fileInputRef.current?.click();
@@ -57,6 +59,9 @@ const BatchProcessingPage = () => {
                 setSessionId(uploadResult.data.sessionId);
                 setUploadSummary(uploadResult.data.uploadSummary);
                 setSkippedFiles(uploadResult.data.skippedFiles || []);
+
+                // Start polling to show upload status
+                startPolling(uploadResult.data.sessionId);
             } else {
                 throw new Error('No session ID received from upload');
             }
@@ -107,76 +112,131 @@ const BatchProcessingPage = () => {
 
         const rankDistribution = getRankDistribution();
 
+        // Determine what to show based on current phase
+        const showUploadStatus = taskStatus.uploadStatus && taskStatus.uploadStatus.isUploading;
+        const showAnalysisStatus = taskStatus.isProcessing;
+
         return (
             <div className="mb-8">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-blue-600" />
-                    AI分析進行状況
-                </h2>
-
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6">
-                    {/* Progress Bar */}
+                {/* Upload Status */}
+                {showUploadStatus && (
                     <div className="mb-6">
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium text-gray-700">全体進捗</span>
-                            <span className="text-sm font-bold text-blue-600">{progressPercentage}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                            <motion.div
-                                className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
-                                initial={{ width: 0 }}
-                                animate={{ width: `${progressPercentage}%` }}
-                                transition={{ duration: 0.5 }}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Status Grid */}
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                        <div className="bg-white rounded-lg p-4 text-center shadow-sm">
-                            <div className="text-2xl font-bold text-blue-600">{taskStatus.totalProducts}</div>
-                            <div className="text-sm text-gray-600">総商品数</div>
-                        </div>
-                        <div className="bg-white rounded-lg p-4 text-center shadow-sm">
-                            <div className="text-2xl font-bold text-green-600">{taskStatus.processedProducts}</div>
-                            <div className="text-sm text-gray-600">処理完了</div>
-                        </div>
-                        <div className="bg-white rounded-lg p-4 text-center shadow-sm">
-                            <div className="text-2xl font-bold text-red-600">{taskStatus.failedProducts}</div>
-                            <div className="text-sm text-gray-600">処理失敗</div>
-                        </div>
-                        <div className="bg-white rounded-lg py-4 px-2 text-center shadow-sm">
-                            <div className="text-xl font-bold text-purple-600">
-                                {taskStatus.currentProduct || '完了'}
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                            <Upload className="w-5 h-5 text-green-600" />
+                            アップロード進行状況
+                        </h2>
+                        <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-xl p-6">
+                            {/* Upload Progress Bar */}
+                            <div className="mb-6">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-sm font-medium text-gray-700">アップロード進捗</span>
+                                    <span className="text-sm font-bold text-green-600">{taskStatus.uploadStatus.uploadProgress}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <motion.div
+                                        className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full"
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${taskStatus.uploadStatus.uploadProgress}%` }}
+                                        transition={{ duration: 0.5 }}
+                                    />
+                                </div>
                             </div>
-                            <div className="text-sm text-gray-600">現在処理中</div>
+
+                            {/* Upload Status Grid */}
+                            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-white rounded-lg p-4 text-center shadow-sm">
+                                    <div className="text-2xl font-bold text-blue-600">{taskStatus.uploadStatus.totalFiles}</div>
+                                    <div className="text-sm text-gray-600">総ファイル数</div>
+                                </div>
+                                <div className="bg-white rounded-lg p-4 text-center shadow-sm">
+                                    <div className="text-2xl font-bold text-green-600">{taskStatus.uploadStatus.uploadedFiles}</div>
+                                    <div className="text-sm text-gray-600">アップロード完了</div>
+                                </div>
+                                <div className="bg-white rounded-lg p-4 text-center shadow-sm">
+                                    <div className="text-2xl font-bold text-orange-600">{taskStatus.uploadStatus.skippedFiles}</div>
+                                    <div className="text-sm text-gray-600">スキップ</div>
+                                </div>
+                                <div className="bg-white rounded-lg p-4 text-center shadow-sm">
+                                    <div className="text-2xl font-bold text-purple-600">{taskStatus.totalProducts}</div>
+                                    <div className="text-sm text-gray-600">商品数</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                )}
 
-                    {/* Flow Chart Style Status */}
-                    <div className="flex items-center justify-center gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                            <span className="text-gray-600">画像アップロード</span>
-                        </div>
-                        <div className="w-8 h-0.5 bg-gray-300"></div>
-                        <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${taskStatus.isProcessing ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
-                            <span className="text-gray-600">AI分析中</span>
-                        </div>
-                        <div className="w-8 h-0.5 bg-gray-300"></div>
-                        <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${taskStatus.isProcessing ? 'bg-gray-300' : 'bg-green-500'}`}></div>
-                            <span className="text-gray-600">完了</span>
+                {/* AI Analysis Status */}
+                {showAnalysisStatus && (
+                    <div>
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                            <Activity className="w-5 h-5 text-blue-600" />
+                            AI分析進行状況
+                        </h2>
+                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6">
+                            {/* Progress Bar */}
+                            <div className="mb-6">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-sm font-medium text-gray-700">全体進捗</span>
+                                    <span className="text-sm font-bold text-blue-600">{progressPercentage}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <motion.div
+                                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${progressPercentage}%` }}
+                                        transition={{ duration: 0.5 }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Status Grid */}
+                            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-white rounded-lg p-4 text-center shadow-sm">
+                                    <div className="text-2xl font-bold text-blue-600">{taskStatus.totalProducts}</div>
+                                    <div className="text-sm text-gray-600">総商品数</div>
+                                </div>
+                                <div className="bg-white rounded-lg p-4 text-center shadow-sm">
+                                    <div className="text-2xl font-bold text-green-600">{taskStatus.processedProducts}</div>
+                                    <div className="text-sm text-gray-600">処理完了</div>
+                                </div>
+                                <div className="bg-white rounded-lg p-4 text-center shadow-sm">
+                                    <div className="text-2xl font-bold text-red-600">{taskStatus.failedProducts}</div>
+                                    <div className="text-sm text-gray-600">処理失敗</div>
+                                </div>
+                                <div className="bg-white rounded-lg py-4 px-2 text-center shadow-sm">
+                                    <div className="text-xl font-bold text-purple-600">
+                                        {taskStatus.currentProduct || '完了'}
+                                    </div>
+                                    <div className="text-sm text-gray-600">現在処理中</div>
+                                </div>
+                            </div>
+
+                            {/* Flow Chart Style Status */}
+                            <div className="flex items-center justify-center gap-4 text-sm">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                    <span className="text-gray-600">画像アップロード</span>
+                                </div>
+                                <div className="w-8 h-0.5 bg-gray-300"></div>
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-3 h-3 rounded-full ${taskStatus.isProcessing ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
+                                    <span className="text-gray-600">AI分析中</span>
+                                </div>
+                                <div className="w-8 h-0.5 bg-gray-300"></div>
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-3 h-3 rounded-full ${taskStatus.isProcessing ? 'bg-gray-300' : 'bg-green-500'}`}></div>
+                                    <span className="text-gray-600">完了</span>
+                                </div>
+                            </div>
+
+                            {taskStatus.startTime && (
+                                <div className="mt-4 text-center text-xs text-gray-500">
+                                    開始時刻: {new Date(taskStatus.startTime).toLocaleString('ja-JP')}
+                                </div>
+                            )}
                         </div>
                     </div>
-
-                    {taskStatus.startTime && (
-                        <div className="mt-4 text-center text-xs text-gray-500">
-                            開始時刻: {new Date(taskStatus.startTime).toLocaleString('ja-JP')}
-                        </div>
-                    )}
-                </div>
+                )}
             </div>
         );
     };

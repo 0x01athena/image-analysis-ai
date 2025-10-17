@@ -55,6 +55,18 @@ class PollingManager {
                         ? Math.round((response.data.processedProducts / response.data.totalProducts) * 100)
                         : 0;
 
+                    // Check if upload is complete (uploadProgress >= 100 and not uploading)
+                    const uploadComplete = response.data.uploadStatus &&
+                        response.data.uploadStatus.uploadProgress >= 100 &&
+                        !response.data.uploadStatus.isUploading;
+
+                    // Check if AI analysis is complete
+                    const analysisComplete = progressPercentage >= 100 || !response.data.isProcessing;
+
+                    // Determine if all tasks are completed
+                    // Only consider completed if both upload is done AND AI analysis is done
+                    const isCompleted = uploadComplete && analysisComplete;
+
                     // Notify all subscribers
                     const sessionSubscribers = this.subscribers.get(sessionId);
                     if (sessionSubscribers) {
@@ -62,14 +74,14 @@ class PollingManager {
                             callback({
                                 ...response.data,
                                 progressPercentage,
-                                isCompleted: progressPercentage >= 100 || !response.data.isProcessing
+                                isCompleted
                             });
                         });
                     }
 
-                    // Stop polling if completed
-                    if (progressPercentage >= 100 || !response.data.isProcessing) {
-                        console.log(`Task completed (${progressPercentage}%), stopping polling`);
+                    // Stop polling if all tasks are completed
+                    if (isCompleted) {
+                        console.log(`All tasks completed (upload: ${response.data.uploadStatus?.uploadProgress}%, AI: ${progressPercentage}%), stopping polling`);
                         this.stopPolling(sessionId);
                     }
                 } else {
@@ -129,7 +141,11 @@ export const useTaskStatus = (sessionId, pollInterval = 2000) => {
                 setIsPolling(false);
             } else {
                 setTaskStatus(data);
-                setIsPolling(true);
+                // Set polling state based on whether there's any active task (upload or AI analysis)
+                // Keep polling active during the transition from upload to AI analysis
+                const hasActiveUpload = data.uploadStatus && data.uploadStatus.isUploading;
+                const hasActiveAnalysis = data.isProcessing;
+                setIsPolling(hasActiveUpload || hasActiveAnalysis);
             }
             setError(null);
         };
@@ -143,17 +159,24 @@ export const useTaskStatus = (sessionId, pollInterval = 2000) => {
                 if (response.success && response.data.length > 0) {
                     const activeSession = response.data[0];
                     if (!sessionId) {
-                        if (activeSession.processingStatus.isProcessing) {
-                            const progressPercentage = activeSession.processingStatus.totalProducts > 0
-                                ? Math.round((activeSession.processingStatus.processedProducts / activeSession.processingStatus.totalProducts) * 100)
-                                : 0;
+                        const hasActiveTask = activeSession.processingStatus.isProcessing ||
+                            (activeSession.processingStatus.uploadStatus && activeSession.processingStatus.uploadStatus.isUploading);
 
-                            if (progressPercentage < 100) {
-                                setTaskStatus(activeSession.processingStatus);
-                                startPolling(activeSession.sessionId);
-                            } else {
-                                console.log('Found completed session on page load, skipping polling');
+                        if (hasActiveTask) {
+                            // Check if AI analysis is complete
+                            if (activeSession.processingStatus.isProcessing) {
+                                const progressPercentage = activeSession.processingStatus.totalProducts > 0
+                                    ? Math.round((activeSession.processingStatus.processedProducts / activeSession.processingStatus.totalProducts) * 100)
+                                    : 0;
+
+                                if (progressPercentage >= 100) {
+                                    console.log('Found completed AI analysis session on page load, skipping polling');
+                                    return;
+                                }
                             }
+
+                            setTaskStatus(activeSession.processingStatus);
+                            startPolling(activeSession.sessionId);
                         }
                     }
                 }

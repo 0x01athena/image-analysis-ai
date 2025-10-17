@@ -80,6 +80,15 @@ class BatchController {
             // Create a processing session
             const sessionId = processingStateService.createSession(productImages);
 
+            // Set upload status to true during upload
+            processingStateService.updateUploadStatus(sessionId, {
+                isUploading: true,
+                totalFiles: uploadedFiles.length,
+                uploadedFiles: uploadedFiles.length - skippedFiles.length,
+                skippedFiles: skippedFiles.length,
+                uploadProgress: 100 // Upload is complete
+            });
+
             const totalProducts = Object.keys(productImages).length;
             const totalImages = uploadedFiles.length;
 
@@ -174,6 +183,12 @@ class BatchController {
                 estimatedCompletion: null
             });
 
+            // Keep upload status active until AI analysis actually starts
+            // This prevents the brief flicker between upload completion and AI start
+            processingStateService.updateUploadStatus(sessionId, {
+                isUploading: true // Keep as true until AI processing begins
+            });
+
             // Start processing in background
             this.processProductsAsync(sessionId);
 
@@ -206,6 +221,11 @@ class BatchController {
         if (!session) return;
 
         const productIds = Object.keys(session.productImages);
+
+        // Set upload status to false when AI analysis actually begins
+        processingStateService.updateUploadStatus(sessionId, {
+            isUploading: false
+        });
 
         for (const productId of productIds) {
             processingStateService.updateProcessingStatus(sessionId, {
