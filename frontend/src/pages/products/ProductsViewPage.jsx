@@ -1,20 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Eye, Trash2, ChevronLeft, ChevronRight, Filter, Search } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Eye, Trash2, ChevronLeft, ChevronRight, Filter, Search, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAllProducts, deleteProduct, deleteMultipleProducts } from '../../api/batchApi';
 
 const ProductsViewPage = () => {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedProducts, setSelectedProducts] = useState(new Set());
-    const [currentPage, setCurrentPage] = useState(1);
+    const [deleting, setDeleting] = useState(false);
+
+    // Get pagination params from URL or use defaults
+    const currentPage = parseInt(searchParams.get('page')) || 1;
+    const pageSize = parseInt(searchParams.get('size')) || 10;
     const [totalPages, setTotalPages] = useState(1);
+
     const [filters, setFilters] = useState({
-        rank: '',
-        date: '',
-        search: ''
+        rank: searchParams.get('rank') || '',
+        date: searchParams.get('date') || '',
+        search: searchParams.get('search') || ''
     });
 
     const loadProducts = async () => {
@@ -22,7 +29,7 @@ const ProductsViewPage = () => {
             setLoading(true);
             const params = {
                 page: currentPage,
-                limit: 50,
+                limit: pageSize,
                 ...(filters.rank && { rank: filters.rank }),
                 ...(filters.date && { date: filters.date })
             };
@@ -38,9 +45,48 @@ const ProductsViewPage = () => {
         }
     };
 
+    // Update URL parameters
+    const updateURLParams = (newParams) => {
+        const params = new URLSearchParams(searchParams);
+        Object.entries(newParams).forEach(([key, value]) => {
+            if (value && value !== '') {
+                params.set(key, value);
+            } else {
+                params.delete(key);
+            }
+        });
+        setSearchParams(params);
+    };
+
+    // Pagination handlers
+    const handlePageChange = (newPage) => {
+        updateURLParams({ page: newPage });
+    };
+
+    const handlePageSizeChange = (newSize) => {
+        updateURLParams({ size: newSize, page: 1 }); // Reset to page 1 when changing page size
+    };
+
+    const handleFilterChange = (filterType, value) => {
+        setFilters(prev => ({ ...prev, [filterType]: value }));
+        updateURLParams({ [filterType]: value, page: 1 }); // Reset to page 1 when filtering
+    };
+
+    const handleSearchChange = (value) => {
+        setFilters(prev => ({ ...prev, search: value }));
+        updateURLParams({ search: value, page: 1 }); // Reset to page 1 when searching
+    };
+
+    const handleDirectPageInput = (e) => {
+        const value = parseInt(e.target.value);
+        if (value >= 1 && value <= totalPages) {
+            handlePageChange(value);
+        }
+    };
+
     useEffect(() => {
         loadProducts();
-    }, [currentPage, filters.rank, filters.date]);
+    }, [currentPage, pageSize, filters.rank, filters.date]);
 
     const handleSelectAll = (checked) => {
         if (checked) {
@@ -63,6 +109,7 @@ const ProductsViewPage = () => {
     const handleDeleteProduct = async (managementNumber) => {
         if (confirm('この商品を削除しますか？')) {
             try {
+                setDeleting(true);
                 await deleteProduct(managementNumber);
                 await loadProducts();
                 setSelectedProducts(prev => {
@@ -73,6 +120,8 @@ const ProductsViewPage = () => {
             } catch (error) {
                 console.error('Error deleting product:', error);
                 alert('商品の削除に失敗しました: ' + error.message);
+            } finally {
+                setDeleting(false);
             }
         }
     };
@@ -88,6 +137,7 @@ const ProductsViewPage = () => {
 
         if (confirm(confirmMessage)) {
             try {
+                setDeleting(true);
                 const result = await deleteMultipleProducts(selectedArray);
 
                 if (result.data.totalFailed > 0) {
@@ -102,6 +152,8 @@ const ProductsViewPage = () => {
             } catch (error) {
                 console.error('Error deleting products:', error);
                 alert('削除に失敗しました: ' + error.message);
+            } finally {
+                setDeleting(false);
             }
         }
     };
@@ -154,7 +206,7 @@ const ProductsViewPage = () => {
 
                         <select
                             value={filters.rank}
-                            onChange={(e) => setFilters(prev => ({ ...prev, rank: e.target.value }))}
+                            onChange={(e) => handleFilterChange('rank', e.target.value)}
                             className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                             <option value="">生成ランク▼</option>
@@ -166,7 +218,7 @@ const ProductsViewPage = () => {
                         <input
                             type="date"
                             value={filters.date}
-                            onChange={(e) => setFilters(prev => ({ ...prev, date: e.target.value }))}
+                            onChange={(e) => handleFilterChange('date', e.target.value)}
                             className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
 
@@ -176,7 +228,7 @@ const ProductsViewPage = () => {
                                 type="text"
                                 placeholder="検索..."
                                 value={filters.search}
-                                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                                onChange={(e) => handleSearchChange(e.target.value)}
                                 className="pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
                         </div>
@@ -288,32 +340,172 @@ const ProductsViewPage = () => {
                         </table>
                     </div>
 
-                    {/* Pagination */}
+                    {/* Enhanced Pagination */}
                     {totalPages > 1 && (
-                        <div className="mt-6 flex items-center justify-between">
-                            <div className="text-sm text-gray-700">
-                                ページ {currentPage} / {totalPages}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                    disabled={currentPage === 1}
-                                    className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <ChevronLeft className="w-4 h-4" />
-                                </button>
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                    disabled={currentPage === totalPages}
-                                    className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
+                        <div className="mt-6 bg-gray-50 rounded-lg p-4">
+                            <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+                                {/* Page Info */}
+                                <div className="text-sm text-gray-700">
+                                    ページ {currentPage} / {totalPages} ({products.length}件表示中)
+                                </div>
+
+                                {/* Page Size Selector */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-600">表示件数:</span>
+                                    <select
+                                        value={pageSize}
+                                        onChange={(e) => handlePageSizeChange(parseInt(e.target.value))}
+                                        className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value={10}>10件</option>
+                                        <option value={25}>25件</option>
+                                        <option value={50}>50件</option>
+                                        <option value={100}>100件</option>
+                                    </select>
+                                </div>
+
+                                {/* Direct Page Input */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-600">ページ:</span>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max={totalPages}
+                                        value={currentPage}
+                                        onChange={handleDirectPageInput}
+                                        className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                    <span className="text-sm text-gray-600">/ {totalPages}</span>
+                                </div>
+
+                                {/* Navigation Buttons */}
+                                <div className="flex items-center gap-1">
+                                    {/* First Page */}
+                                    <button
+                                        onClick={() => handlePageChange(1)}
+                                        disabled={currentPage === 1}
+                                        className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded hover:bg-gray-200"
+                                        title="最初のページ"
+                                    >
+                                        <ChevronsLeft className="w-4 h-4" />
+                                    </button>
+
+                                    {/* Previous Page */}
+                                    <button
+                                        onClick={() => handlePageChange(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                        className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded hover:bg-gray-200"
+                                        title="前のページ"
+                                    >
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </button>
+
+                                    {/* Page Numbers */}
+                                    <div className="flex items-center gap-1">
+                                        {(() => {
+                                            const pages = [];
+                                            const startPage = Math.max(1, currentPage - 2);
+                                            const endPage = Math.min(totalPages, currentPage + 2);
+
+                                            // Show first page if not in range
+                                            if (startPage > 1) {
+                                                pages.push(
+                                                    <button
+                                                        key={1}
+                                                        onClick={() => handlePageChange(1)}
+                                                        className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded"
+                                                    >
+                                                        1
+                                                    </button>
+                                                );
+                                                if (startPage > 2) {
+                                                    pages.push(
+                                                        <span key="ellipsis1" className="px-2 text-gray-400">
+                                                            ...
+                                                        </span>
+                                                    );
+                                                }
+                                            }
+
+                                            // Show pages in range
+                                            for (let i = startPage; i <= endPage; i++) {
+                                                pages.push(
+                                                    <button
+                                                        key={i}
+                                                        onClick={() => handlePageChange(i)}
+                                                        className={`px-3 py-1 text-sm rounded ${i === currentPage
+                                                            ? 'bg-blue-600 text-white'
+                                                            : 'text-gray-600 hover:text-gray-800 hover:bg-gray-200'
+                                                            }`}
+                                                    >
+                                                        {i}
+                                                    </button>
+                                                );
+                                            }
+
+                                            // Show last page if not in range
+                                            if (endPage < totalPages) {
+                                                if (endPage < totalPages - 1) {
+                                                    pages.push(
+                                                        <span key="ellipsis2" className="px-2 text-gray-400">
+                                                            ...
+                                                        </span>
+                                                    );
+                                                }
+                                                pages.push(
+                                                    <button
+                                                        key={totalPages}
+                                                        onClick={() => handlePageChange(totalPages)}
+                                                        className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded"
+                                                    >
+                                                        {totalPages}
+                                                    </button>
+                                                );
+                                            }
+
+                                            return pages;
+                                        })()}
+                                    </div>
+
+                                    {/* Next Page */}
+                                    <button
+                                        onClick={() => handlePageChange(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                        className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded hover:bg-gray-200"
+                                        title="次のページ"
+                                    >
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+
+                                    {/* Last Page */}
+                                    <button
+                                        onClick={() => handlePageChange(totalPages)}
+                                        disabled={currentPage === totalPages}
+                                        className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded hover:bg-gray-200"
+                                        title="最後のページ"
+                                    >
+                                        <ChevronsRight className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
                 </motion.div>
             </div>
+
+            {/* Spinner Overlay */}
+            {deleting && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-8 flex flex-col items-center gap-4 shadow-xl">
+                        <img
+                            src="/src/assets/spinner.gif"
+                            alt="Loading..."
+                            className="w-12 h-12"
+                        />
+                        <p className="text-gray-700 font-medium">商品を削除中...</p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
