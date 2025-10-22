@@ -211,8 +211,18 @@ const ProductDetailsPage = () => {
                                 <ArrowLeft className="w-5 h-5" />
                             </button>
                             <div>
-                                <h1 className="text-2xl font-bold text-gray-900">商品詳細</h1>
-                                <p className="text-gray-600">管理番号: {product.managementNumber}</p>
+                                <h1 className="text-2xl font-bold text-gray-900 mb-1">商品詳細</h1>
+                                <div className="flex items-center gap-2">
+                                    <p className="text-gray-600"><b>管理番号</b>: {product.managementNumber}</p>
+                                    <p className="text-sm text-gray-500"><b>アップロード日時</b>: {new Date(product.createdAt).toLocaleString('ja-JP', {
+                                        year: 'numeric',
+                                        month: '2-digit',
+                                        day: '2-digit',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        second: '2-digit'
+                                    })}</p>
+                                </div>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
