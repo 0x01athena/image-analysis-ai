@@ -167,7 +167,7 @@ const ProductsViewPage = () => {
 
         return (
             <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${colors[rank] || colors['C']}`}>
-                {rank ? `ランク ${rank}` : '未設定'}
+                {rank ? `ランク ${rank}` : '作成中'}
             </span>
         );
     };
@@ -300,7 +300,7 @@ const ProductsViewPage = () => {
                                             </td>
                                             <td className="p-4">
                                                 <div className="max-w-xs truncate" title={product.title}>
-                                                    {product.title || 'タイトル未設定'}
+                                                    {product.title || 'タイトル作成中'}
                                                 </div>
                                             </td>
                                             <td className="p-4 text-sm text-gray-600">

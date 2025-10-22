@@ -18,6 +18,7 @@ model Product {
   managementNumber String   @unique
   title            String?
   candidateTitles  String   @default("[]") // JSON string for SQLite compatibility
+  measurementType  String?  // JSON string for SQLite compatibility - stores {"foreign":"EUR 44", "japanese":"日本サイズ28.5cm"}
   level            String?
   measurement      String?
   condition        String?

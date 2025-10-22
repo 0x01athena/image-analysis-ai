@@ -17,6 +17,7 @@ const ProductDetailsPage = () => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [candidateTitles, setCandidateTitles] = useState([]);
     const [showTitleSelector, setShowTitleSelector] = useState(false);
+    const [showImageModal, setShowImageModal] = useState(false);
 
     const loadProduct = async () => {
         try {
@@ -34,11 +35,15 @@ const ProductDetailsPage = () => {
             const candidateTitlesData = JSON.parse(productData.candidateTitles || '[]');
             setCandidateTitles(candidateTitlesData);
 
+            // Parse measurementType from JSON string
+            const measurementTypeData = productData.measurementType ? JSON.parse(productData.measurementType) : { foreign: '', japanese: '' };
+
             // Initialize form data
             setFormData({
                 title: productData.title || '',
                 level: productData.level || '',
                 measurement: productData.measurement || '',
+                measurementType: measurementTypeData,
                 condition: productData.condition || '',
                 category: productData.category || '',
                 shop1: productData.shop1 || '',
@@ -140,6 +145,14 @@ const ProductDetailsPage = () => {
         setCurrentImageIndex(index);
     };
 
+    const openImageModal = () => {
+        setShowImageModal(true);
+    };
+
+    const closeImageModal = () => {
+        setShowImageModal(false);
+    };
+
     const handleTitleSelection = async (selectedTitle) => {
         try {
             await selectTitle(managementNumber, selectedTitle);
@@ -233,7 +246,8 @@ const ProductDetailsPage = () => {
                                         <img
                                             src={`/public/images/${images[currentImageIndex]}`}
                                             alt={`Product ${currentImageIndex + 1}`}
-                                            className="w-full h-full object-contain"
+                                            className="w-full h-full object-contain cursor-pointer hover:opacity-90 transition-opacity duration-300"
+                                            onClick={openImageModal}
                                             onError={(e) => {
                                                 console.error('Image load error:', images[currentImageIndex]);
                                                 e.target.style.display = 'none';
@@ -285,7 +299,8 @@ const ProductDetailsPage = () => {
                                                     <img
                                                         src={`/public/images/${image}`}
                                                         alt={`Thumbnail ${index + 1}`}
-                                                        className="w-full h-full object-cover rounded"
+                                                        className="w-full h-full object-cover rounded cursor-pointer hover:opacity-80 transition-opacity duration-300"
+                                                        onClick={openImageModal}
                                                         onError={(e) => {
                                                             console.error('Thumbnail load error:', image);
                                                             e.target.style.display = 'none';
@@ -377,6 +392,39 @@ const ProductDetailsPage = () => {
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     placeholder="着丈:65 肩幅:45 身幅:50 袖丈:20"
                                 />
+                            </div>
+
+                            {/* Measurement Type */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    サイズ形式
+                                </label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                                            海外サイズ
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.measurementType?.foreign || ''}
+                                            onChange={(e) => handleInputChange('measurementType', { ...formData.measurementType, foreign: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="EUR 44"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                                            日本サイズ
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.measurementType?.japanese || ''}
+                                            onChange={(e) => handleInputChange('measurementType', { ...formData.measurementType, japanese: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="日本サイズ28.5cm"
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Condition */}
@@ -510,6 +558,69 @@ const ProductDetailsPage = () => {
                                     キャンセル
                                 </button>
                             </div>
+                        </motion.div>
+                    </div>
+                )}
+
+                {/* Image Enlargement Modal */}
+                {showImageModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50" onClick={closeImageModal}>
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            className="relative max-w-[98vw] max-h-[98vh] flex items-center justify-center"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Close Button */}
+                            <button
+                                onClick={closeImageModal}
+                                className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-all duration-300"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+
+                            {/* Main Image */}
+                            <img
+                                src={`/public/images/${images[currentImageIndex]}`}
+                                alt={`Product ${currentImageIndex + 1}`}
+                                className="max-w-[98vw] max-h-[98vh] object-contain"
+                                onError={(e) => {
+                                    console.error('Modal image load error:', images[currentImageIndex]);
+                                    e.target.style.display = 'none';
+                                }}
+                            />
+
+                            {/* Navigation Arrows for Modal */}
+                            {images.length > 1 && (
+                                <>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            prevImage();
+                                        }}
+                                        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-75 transition-all duration-300"
+                                    >
+                                        <ChevronLeft className="w-6 h-6" />
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            nextImage();
+                                        }}
+                                        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-75 transition-all duration-300"
+                                    >
+                                        <ChevronRight className="w-6 h-6" />
+                                    </button>
+                                </>
+                            )}
+
+                            {/* Image Counter for Modal */}
+                            {images.length > 1 && (
+                                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg text-sm">
+                                    {currentImageIndex + 1} / {images.length}
+                                </div>
+                            )}
                         </motion.div>
                     </div>
                 )}

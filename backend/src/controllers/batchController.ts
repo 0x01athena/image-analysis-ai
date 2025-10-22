@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { productService, ProductImages } from '../services/ProductService';
+import { productService, ProductImages } from '../services/productService';
 import { processingStateService, ProcessingResult } from '../services/ProcessingStateService';
 import { openAIService, OpenAIProductAnalysis } from '../services/OpenAIService';
 
@@ -305,6 +305,7 @@ class BatchController {
                 candidateTitles: analysis.title, // Store all candidate titles
                 level: analysis.level,
                 measurement: analysis.measurement,
+                measurementType: analysis.measurement_type, // Map measurement_type to measurementType
                 condition: analysis.condition,
                 category: analysis.category,
                 shop1: analysis.shop1,
