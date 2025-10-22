@@ -331,11 +331,24 @@ const ProductDetailsPage = () => {
                                     rows={3}
                                     placeholder="商品タイトル"
                                 />
-                                {candidateTitles.length > 1 && (
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        AIが生成した{candidateTitles.length}個の候補があります
-                                    </p>
-                                )}
+                                {/* Character Count Display */}
+                                <div className="flex justify-between items-center mt-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-xs font-medium ${formData.title.length >= 65 ? 'text-red-600' : 'text-gray-500'}`}>
+                                            {formData.title.length} 文字
+                                        </span>
+                                        {formData.title.length >= 65 && (
+                                            <span className="text-xs text-red-600 font-medium">
+                                                (65文字以上)
+                                            </span>
+                                        )}
+                                    </div>
+                                    {candidateTitles.length > 1 && (
+                                        <p className="text-xs text-gray-500">
+                                            AIが生成した{candidateTitles.length}個の候補があります
+                                        </p>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Generation Rank */}
@@ -477,6 +490,10 @@ const ProductDetailsPage = () => {
                                                             選択中
                                                         </span>
                                                     )}
+                                                    {/* Character count for candidate title */}
+                                                    <span className={`text-xs font-medium ${title.length >= 65 ? 'text-red-600' : 'text-gray-500'}`}>
+                                                        {title.length} 文字
+                                                    </span>
                                                 </div>
                                                 <p className="text-gray-900 leading-relaxed">{title}</p>
                                             </div>
