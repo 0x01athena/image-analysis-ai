@@ -105,7 +105,9 @@ app.get('/health', async (req, res) => {
 
 // API routes
 import batchRoutes from './routes/batchRoutes';
+import userRoutes from './routes/userRoutes';
 app.use('/api/batch', batchRoutes);
+app.use('/api/users', userRoutes);
 
 // 404 handler
 app.use((req, res) => {
