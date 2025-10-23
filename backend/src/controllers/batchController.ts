@@ -305,7 +305,7 @@ class BatchController {
                 candidateTitles: analysis.title, // Store all candidate titles
                 level: analysis.level,
                 measurement: analysis.measurement,
-                measurementType: analysis.measurement_type, // Map measurement_type to measurementType
+                measurementType: analysis.measurement_type ? JSON.stringify(analysis.measurement_type) : null, // Convert object to JSON string
                 condition: analysis.condition,
                 category: analysis.category,
                 shop1: analysis.shop1,

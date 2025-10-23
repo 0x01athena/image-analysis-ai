@@ -15,7 +15,7 @@ export interface ProductData {
     candidateTitles?: string[] | null;
     level?: string | null;
     measurement?: string | null;
-    measurementType?: { foreign: string; japanese: string } | null;
+    measurementType?: string | null;
     condition?: string | null;
     category?: string | null;
     shop1?: string | null;
@@ -76,7 +76,6 @@ export class ProductService {
                             candidateTitles: "[]",
                             level: null,
                             measurement: null,
-                            measurementType: null,
                             condition: null,
                             category: null,
                             shop1: null,
@@ -180,7 +179,7 @@ export class ProductService {
             if (data.candidateTitles !== undefined) updateData.candidateTitles = JSON.stringify(data.candidateTitles);
             if (data.level !== undefined) updateData.level = data.level;
             if (data.measurement !== undefined) updateData.measurement = data.measurement;
-            if (data.measurementType !== undefined) updateData.measurementType = data.measurementType ? JSON.stringify(data.measurementType) : null;
+            if (data.measurementType !== undefined) updateData.measurementType = data.measurementType;
             if (data.condition !== undefined) updateData.condition = data.condition;
             if (data.category !== undefined) updateData.category = data.category;
             if (data.shop1 !== undefined) updateData.shop1 = data.shop1;
