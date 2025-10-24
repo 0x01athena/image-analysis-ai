@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, FolderOpen, Trophy, Play, Upload, CheckCircle, XCircle, Clock, Activity, BarChart3, TrendingUp } from 'lucide-react';
+import { FileText, FolderOpen, Trophy, Play, Upload, CheckCircle, XCircle, Clock, Activity, BarChart3, TrendingUp, User } from 'lucide-react';
 import { uploadDirectoryImages, startBatchProcessing } from '../../api/batchApi';
-import { useTaskStatus } from '../../hooks/useTaskStatus';
+import { useUserSession } from '../../hooks/useUserSession';
 import spinner from '../../assets/spinner.gif';
 
 const BatchProcessingPage = () => {
@@ -11,7 +11,6 @@ const BatchProcessingPage = () => {
     const [isWorking, setIsWorking] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [sessionId, setSessionId] = useState(null);
     const [uploadSummary, setUploadSummary] = useState(null);
     const [skippedFiles, setSkippedFiles] = useState([]);
     const [fileStats, setFileStats] = useState({
@@ -23,53 +22,128 @@ const BatchProcessingPage = () => {
     const [lockedProducts, setLockedProducts] = useState([]);
     const [isLockedProductsExpanded, setIsLockedProductsExpanded] = useState(false);
     const [processCompleted, setProcessCompleted] = useState(false);
+    const [taskProgress, setTaskProgress] = useState({
+        totalProducts: 0,
+        completedProducts: 0,
+        failedProducts: 0,
+        currentProduct: null,
+        startTime: null,
+        isFinished: false
+    });
     const fileInputRef = useRef(null);
+    const progressIntervalRef = useRef(null);
 
-    // Use the task status hook for periodic polling - no initial sessionId needed
-    const { taskStatus, isPolling, error, startPolling } = useTaskStatus();
-
-    // Manage state transitions based on task status
-    useEffect(() => {
-        if (taskStatus) {
-            // Update states based on task status
-            if (taskStatus.uploadStatus && taskStatus.uploadStatus.isUploading) {
-                setIsUploading(true);
-            } else {
-                setIsUploading(false);
-            }
-
-            if (taskStatus.isProcessing) {
-                setIsProcessing(true);
-            } else {
-                setIsProcessing(false);
-            }
-
-            // Set isWorking based on any active task
-            const hasActiveTask = taskStatus.isProcessing || (taskStatus.uploadStatus && taskStatus.uploadStatus.isUploading);
-            setIsWorking(hasActiveTask);
-        } else {
-            setIsUploading(false);
-            setIsProcessing(false);
-            setIsWorking(false);
-
-            if (sessionId && !processCompleted) {
-                setProcessCompleted(true);
-
-                setSelectedFiles([]);
-                setDirectoryPath('');
-
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = '';
-                }
-            }
-        }
-    }, [taskStatus, sessionId]);
+    // User session management
+    const {
+        users,
+        selectedUser,
+        currentSession,
+        loading: usersLoading,
+        error: usersError,
+        saveSelectedUser,
+        saveCurrentSession,
+        clearCurrentSession,
+        checkWorkProcessStatus
+    } = useUserSession();
 
     // Check if there's an active task (upload or AI analysis in progress)
-    const hasActiveTask = taskStatus && (taskStatus.isProcessing || (taskStatus.uploadStatus && taskStatus.uploadStatus.isUploading));
-    // Also check if we have a sessionId but no taskStatus yet (during upload)
-    const hasActiveSession = sessionId && !taskStatus;
-    const isInterfaceDisabled = hasActiveTask || hasActiveSession || isUploading || isProcessing;
+    const isInterfaceDisabled = isUploading || isProcessing;
+    const canStartProcessing = selectedUser && selectedFiles.length > 0 && !isInterfaceDisabled;
+
+    // Function to check task progress
+    const checkTaskProgress = async () => {
+        if (!currentSession?.workProcessId) return;
+
+        try {
+            const status = await checkWorkProcessStatus(currentSession.workProcessId);
+            if (status?.success) {
+                const workProcess = status.data;
+                const productIds = workProcess.productIds || [];
+                const totalProducts = productIds.length;
+                const finishedProducts = workProcess.finishedProducts || 0;
+                const currentProductId = workProcess.currentProductId || null;
+
+                setTaskProgress(prev => ({
+                    ...prev,
+                    totalProducts,
+                    completedProducts: finishedProducts,
+                    failedProducts: 0, // We can add failed tracking later if needed
+                    currentProduct: currentProductId,
+                    isFinished: workProcess.isFinished,
+                    startTime: workProcess.createdAt
+                }));
+
+                // If task is finished, stop monitoring and reset UI
+                if (workProcess.isFinished) {
+                    stopProgressMonitoring();
+                    handleTaskCompletion();
+                }
+            }
+        } catch (error) {
+            console.error('Error checking task progress:', error);
+        }
+    };
+
+    // Start progress monitoring
+    const startProgressMonitoring = () => {
+        if (progressIntervalRef.current) return;
+
+        progressIntervalRef.current = setInterval(checkTaskProgress, 2000);
+    };
+
+    // Stop progress monitoring
+    const stopProgressMonitoring = () => {
+        if (progressIntervalRef.current) {
+            clearInterval(progressIntervalRef.current);
+            progressIntervalRef.current = null;
+        }
+    };
+
+    // Handle task completion
+    const handleTaskCompletion = () => {
+        setIsProcessing(false);
+        setIsUploading(false);
+        setIsWorking(false);
+        setProcessCompleted(true);
+
+        // Clear form
+        setSelectedFiles([]);
+        setDirectoryPath('');
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+
+        // Clear session after completion
+        clearCurrentSession();
+
+        // Reset task progress after a delay
+        setTimeout(() => {
+            setProcessCompleted(false);
+            setTaskProgress({
+                totalProducts: 0,
+                completedProducts: 0,
+                failedProducts: 0,
+                currentProduct: null,
+                startTime: null,
+                isFinished: false
+            });
+        }, 3000);
+    };
+
+    // Initialize task monitoring on page load
+    useEffect(() => {
+        if (currentSession?.workProcessId) {
+            // If there's an active session, start monitoring
+            setIsProcessing(true);
+            setIsWorking(true);
+            startProgressMonitoring();
+        }
+
+        // Cleanup on unmount
+        return () => {
+            stopProgressMonitoring();
+        };
+    }, [currentSession?.workProcessId]);
 
     const handleDirectorySelect = () => {
         fileInputRef.current?.click();
@@ -139,6 +213,11 @@ const BatchProcessingPage = () => {
     };
 
     const handleStartBatchProcessing = async () => {
+        if (!selectedUser) {
+            alert('作業者を選択してください');
+            return;
+        }
+
         if (selectedFiles.length === 0) {
             alert('画像ファイルを選択してください');
             return;
@@ -148,12 +227,10 @@ const BatchProcessingPage = () => {
         setIsWorking(true);
 
         try {
-            const uploadResult = await uploadDirectoryImages(selectedFiles);
+            const uploadResult = await uploadDirectoryImages(selectedFiles, selectedUser.id);
             console.log('Upload result:', uploadResult);
 
-            // Store the sessionId from upload response
-            if (uploadResult.success && uploadResult.data.sessionId) {
-                setSessionId(uploadResult.data.sessionId);
+            if (uploadResult.success) {
                 setUploadSummary(uploadResult.data.uploadSummary);
                 setSkippedFiles(uploadResult.data.skippedFiles || []);
 
@@ -162,20 +239,27 @@ const BatchProcessingPage = () => {
                     uploadedProducts: uploadResult.data.totalProducts || 0
                 }));
 
-                startPolling(uploadResult.data.sessionId);
+                // Save session to localStorage
+                const sessionData = {
+                    workProcessId: uploadResult.data.workProcessId,
+                    userId: uploadResult.data.userId,
+                    startTime: new Date().toISOString(),
+                    productCount: uploadResult.data.totalProducts
+                };
+                saveCurrentSession(sessionData);
+
+                setIsProcessing(true);
+
+                // Start batch processing using API function with workProcessId
+                const processingResult = await startBatchProcessing(uploadResult.data.workProcessId);
+                console.log('Processing started:', processingResult);
+
+                if (processingResult.success) {
+                    // Start monitoring progress
+                    startProgressMonitoring();
+                }
             } else {
-                throw new Error('No session ID received from upload');
-            }
-
-            // Don't set isUploading to false here - let the task status manage it
-            setIsProcessing(true);
-
-            // Start batch processing using API function with sessionId
-            const processingResult = await startBatchProcessing(uploadResult.data.sessionId);
-            console.log('Processing started:', processingResult);
-
-            if (processingResult.success) {
-                startPolling(uploadResult.data.sessionId);
+                throw new Error('Upload failed');
             }
 
         } catch (error) {
@@ -185,90 +269,6 @@ const BatchProcessingPage = () => {
             setIsProcessing(false);
             setIsWorking(false);
         }
-        // Don't set isWorking to false in finally - let the task status manage it
-    };
-
-    // Task Status Display Component
-    const TaskStatusDisplay = () => {
-        if (!taskStatus) return null;
-
-        const progressPercentage = taskStatus.totalProducts > 0
-            ? Math.round((taskStatus.processedProducts / taskStatus.totalProducts) * 100)
-            : 0;
-
-        return (
-            <div className="mb-8">
-                <div>
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <Activity className="w-5 h-5 text-blue-600" />
-                        AI分析進行状況
-                    </h2>
-                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6">
-                        {/* Progress Bar */}
-                        <div className="mb-6">
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-sm font-medium text-gray-700">全体進捗</span>
-                                <span className="text-sm font-bold text-blue-600">{progressPercentage}%</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                                <motion.div
-                                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${progressPercentage}%` }}
-                                    transition={{ duration: 0.5 }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Status Grid */}
-                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                            <div className="bg-white rounded-lg p-4 text-center shadow-sm">
-                                <div className="text-2xl font-bold text-blue-600">{taskStatus.totalProducts}</div>
-                                <div className="text-sm text-gray-600">総商品数</div>
-                            </div>
-                            <div className="bg-white rounded-lg p-4 text-center shadow-sm">
-                                <div className="text-2xl font-bold text-green-600">{taskStatus.processedProducts}</div>
-                                <div className="text-sm text-gray-600">処理完了</div>
-                            </div>
-                            <div className="bg-white rounded-lg p-4 text-center shadow-sm">
-                                <div className="text-2xl font-bold text-red-600">{taskStatus.failedProducts}</div>
-                                <div className="text-sm text-gray-600">処理失敗</div>
-                            </div>
-                            <div className="bg-white rounded-lg py-4 px-2 text-center shadow-sm">
-                                <div className="text-xl font-bold text-purple-600">
-                                    {taskStatus.currentProduct || '完了'}
-                                </div>
-                                <div className="text-sm text-gray-600">現在処理中</div>
-                            </div>
-                        </div>
-
-                        {/* Flow Chart Style Status */}
-                        <div className="flex items-center justify-center gap-4 text-sm">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                                <span className="text-gray-600">画像アップロード</span>
-                            </div>
-                            <div className="w-8 h-0.5 bg-gray-300"></div>
-                            <div className="flex items-center gap-2">
-                                <div className={`w-3 h-3 rounded-full ${taskStatus.isProcessing ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
-                                <span className="text-gray-600">AI分析中</span>
-                            </div>
-                            <div className="w-8 h-0.5 bg-gray-300"></div>
-                            <div className="flex items-center gap-2">
-                                <div className={`w-3 h-3 rounded-full ${taskStatus.isProcessing ? 'bg-gray-300' : 'bg-green-500'}`}></div>
-                                <span className="text-gray-600">完了</span>
-                            </div>
-                        </div>
-
-                        {taskStatus.startTime && (
-                            <div className="mt-4 text-center text-xs text-gray-500">
-                                開始時刻: {new Date(taskStatus.startTime).toLocaleString('ja-JP')}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        );
     };
 
     return (
@@ -284,21 +284,152 @@ const BatchProcessingPage = () => {
                     <div className="mb-8">
                         <h1 className="text-3xl font-bold text-gray-900 mb-4">一括処理 (最大5000点)</h1>
                         <p className="text-gray-600">画像ディレクトリを指定して、管理番号ごとに自動でタイトルを生成します</p>
+                        {isWorking && (
+                            <div className="flex items-center gap-2 mt-4">
+                                <img src={spinner} alt="spinner" className="w-5 h-5" />
+                                {isUploading && <span className="text-gray-600">アップロード中...</span>}
+                                {isProcessing && <span className="text-gray-600">処理中...</span>}
+                            </div>
+                        )}
                     </div>
 
-                    {isWorking && (
-                        <div className="flex justify-center items-center">
-                            <img src={spinner} alt="spinner" className="w-10 h-10" />&nbsp;
-                            {isUploading && <span className="text-gray-600">アップロード中...</span>}
-                            {isProcessing && <span className="text-gray-600">処理中...</span>}
+                    {/* AI Analysis Progress Status */}
+                    {isProcessing && (
+                        <div className="mb-8">
+                            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                <Activity className="w-5 h-5 text-purple-600" />
+                                AI分析進行状況
+                            </h2>
+                            <div className="bg-gray-50 rounded-lg p-6">
+                                {taskProgress.totalProducts > 0 ? (
+                                    <>
+                                        {/* Overall Progress Bar */}
+                                        <div className="mb-6">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="text-sm font-medium text-gray-700">全体進捗</span>
+                                                <span className="text-sm font-medium text-purple-600">
+                                                    {Math.round((taskProgress.completedProducts / taskProgress.totalProducts) * 100)}%
+                                                </span>
+                                            </div>
+                                            <div className="w-full bg-gray-200 rounded-full h-2">
+                                                <div
+                                                    className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                                                    style={{
+                                                        width: `${(taskProgress.completedProducts / taskProgress.totalProducts) * 100}%`
+                                                    }}
+                                                ></div>
+                                            </div>
+                                        </div>
+
+                                        {/* Status Cards */}
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                            <div className="bg-white rounded-lg p-4 text-center">
+                                                <div className="text-2xl font-bold text-purple-600">{taskProgress.totalProducts}</div>
+                                                <div className="text-sm text-gray-600">総商品数</div>
+                                            </div>
+                                            <div className="bg-white rounded-lg p-4 text-center">
+                                                <div className="text-2xl font-bold text-green-600">{taskProgress.completedProducts}</div>
+                                                <div className="text-sm text-gray-600">処理完了</div>
+                                            </div>
+                                            <div className="bg-white rounded-lg p-4 text-center">
+                                                <div className="text-2xl font-bold text-gray-600">{taskProgress.failedProducts}</div>
+                                                <div className="text-sm text-gray-600">処理失敗</div>
+                                            </div>
+                                            <div className="bg-white rounded-lg p-4 text-center">
+                                                <div className="text-lg font-bold text-purple-600 truncate">
+                                                    {taskProgress.currentProduct || '待機中'}
+                                                </div>
+                                                <div className="text-sm text-gray-600">現在処理中</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Progress Legend */}
+                                        <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+                                            <div className="flex items-center gap-1">
+                                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                                <span>画像アップロード</span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                                <span>AI分析中</span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                                                <span>完了</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Start Time */}
+                                        {taskProgress.startTime && (
+                                            <div className="text-sm text-gray-500">
+                                                開始時刻: {new Date(taskProgress.startTime).toLocaleString('ja-JP')}
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <div className="text-center py-8">
+                                        <div className="flex items-center justify-center gap-2 mb-4">
+                                            <img src={spinner} alt="spinner" className="w-6 h-6" />
+                                            <span className="text-gray-600">処理を開始しています...</span>
+                                        </div>
+                                        <p className="text-sm text-gray-500">
+                                            商品情報を読み込み中です。しばらくお待ちください。
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 
-                    {/* Task Status Display - Only show for AI analysis, not uploads */}
-                    <TaskStatusDisplay />
+                    {/* User Selection */}
+                    <div className="mb-8">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                            <User className="w-5 h-5 text-blue-600" />
+                            作業者選択
+                        </h2>
+                        <div>
+                            {usersLoading ? (
+                                <div className="flex items-center gap-2">
+                                    <img src={spinner} alt="spinner" className="w-4 h-4" />
+                                    <span className="text-gray-600">ユーザーを読み込み中...</span>
+                                </div>
+                            ) : usersError ? (
+                                <div className="text-red-600">
+                                    ユーザーの読み込みに失敗しました: {usersError}
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-4">
+                                    <select
+                                        value={selectedUser?.id || ''}
+                                        onChange={(e) => {
+                                            const user = users.find(u => u.id === e.target.value);
+                                            if (user) {
+                                                saveSelectedUser(user);
+                                            }
+                                        }}
+                                        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        disabled={isInterfaceDisabled}
+                                    >
+                                        <option value="">作業者を選択してください</option>
+                                        {users.map(user => (
+                                            <option key={user.id} value={user.id}>
+                                                {user.username}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {selectedUser && (
+                                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                                            <User className="w-4 h-4" />
+                                            選択中: <span className="font-medium">{selectedUser.username}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
                     {/* Process Completion Message */}
-                    {processCompleted && !taskStatus && (
+                    {processCompleted && !isWorking && (
                         <div className="mb-8">
                             <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
                                 <div className="flex items-center justify-center gap-2 mb-2">
@@ -461,21 +592,21 @@ const BatchProcessingPage = () => {
                         <div className="text-center">
                             <button
                                 onClick={handleStartBatchProcessing}
-                                disabled={selectedFiles.length === 0}
-                                className={`px-12 py-4 rounded-xl text-lg font-semibold shadow-lg transition-all duration-300 flex items-center gap-3 mx-auto ${selectedFiles.length === 0 || isUploading || isProcessing
+                                disabled={!canStartProcessing}
+                                className={`px-12 py-4 rounded-xl text-lg font-semibold shadow-lg transition-all duration-300 flex items-center gap-3 mx-auto ${!canStartProcessing
                                     ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                                     : 'bg-purple-600 text-white hover:bg-purple-700 hover:shadow-xl'
                                     }`}
                             >
-                                {isUploading ? (
+                                {!selectedUser ? (
                                     <>
-                                        <Upload className="w-5 h-5" />
-                                        アップロード中...
+                                        <User className="w-5 h-5" />
+                                        作業者を選択してください
                                     </>
-                                ) : isProcessing ? (
+                                ) : selectedFiles.length === 0 ? (
                                     <>
-                                        <Clock className="w-5 h-5" />
-                                        処理中...
+                                        <FolderOpen className="w-5 h-5" />
+                                        画像フォルダを選択してください
                                     </>
                                 ) : processCompleted ? (
                                     <>

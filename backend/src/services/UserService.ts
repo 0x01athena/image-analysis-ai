@@ -12,28 +12,15 @@ export class UserService {
      */
     async createUser(data: UserData): Promise<any> {
         try {
-            const newUser = await prisma.user.create({
+            const user = await prisma.user.create({
                 data: {
                     username: data.username
                 }
             });
-            return newUser;
+
+            return user;
         } catch (error) {
             console.error('Error creating user:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Get all users
-     */
-    async getAllUsers(): Promise<any[]> {
-        try {
-            return await prisma.user.findMany({
-                orderBy: { createdAt: 'desc' }
-            });
-        } catch (error) {
-            console.error('Error getting all users:', error);
             throw error;
         }
     }
@@ -43,11 +30,13 @@ export class UserService {
      */
     async getUserById(id: string): Promise<any | null> {
         try {
-            return await prisma.user.findUnique({
+            const user = await prisma.user.findUnique({
                 where: { id }
             });
+
+            return user;
         } catch (error) {
-            console.error(`Error getting user ${id}:`, error);
+            console.error('Error getting user by ID:', error);
             throw error;
         }
     }
@@ -57,11 +46,31 @@ export class UserService {
      */
     async getUserByUsername(username: string): Promise<any | null> {
         try {
-            return await prisma.user.findUnique({
+            const user = await prisma.user.findUnique({
                 where: { username }
             });
+
+            return user;
         } catch (error) {
-            console.error(`Error getting user by username ${username}:`, error);
+            console.error('Error getting user by username:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get all users
+     */
+    async getAllUsers(): Promise<any[]> {
+        try {
+            const users = await prisma.user.findMany({
+                orderBy: {
+                    createdAt: 'desc'
+                }
+            });
+
+            return users;
+        } catch (error) {
+            console.error('Error getting all users:', error);
             throw error;
         }
     }
@@ -71,43 +80,39 @@ export class UserService {
      */
     async updateUser(id: string, data: Partial<UserData>): Promise<any> {
         try {
-            const updateData: any = {
-                updatedAt: new Date()
-            };
-
-            if (data.username !== undefined) updateData.username = data.username;
-
-            const updatedUser = await prisma.user.update({
+            const user = await prisma.user.update({
                 where: { id },
-                data: updateData
+                data: {
+                    ...data,
+                    updatedAt: new Date()
+                }
             });
 
-            return updatedUser;
+            return user;
         } catch (error) {
-            console.error(`Error updating user ${id}:`, error);
+            console.error('Error updating user:', error);
             throw error;
         }
     }
 
     /**
-     * Delete user by ID
+     * Delete user
      */
     async deleteUser(id: string): Promise<any> {
         try {
-            const deletedUser = await prisma.user.delete({
+            const user = await prisma.user.delete({
                 where: { id }
             });
 
-            console.log(`Successfully deleted user ${id}`);
-            return deletedUser;
+            return user;
         } catch (error) {
-            console.error(`Error deleting user ${id}:`, error);
+            console.error('Error deleting user:', error);
             throw error;
         }
     }
 
     /**
-     * Delete multiple users by IDs
+     * Delete multiple users
      */
     async deleteMultipleUsers(ids: string[]): Promise<{ deleted: string[], failed: string[] }> {
         const deleted: string[] = [];
@@ -124,6 +129,24 @@ export class UserService {
         }
 
         return { deleted, failed };
+    }
+
+    /**
+     * Get or create user by username
+     */
+    async getOrCreateUser(username: string): Promise<any> {
+        try {
+            let user = await this.getUserByUsername(username);
+
+            if (!user) {
+                user = await this.createUser({ username });
+            }
+
+            return user;
+        } catch (error) {
+            console.error('Error getting or creating user:', error);
+            throw error;
+        }
     }
 }
 

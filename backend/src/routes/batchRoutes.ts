@@ -107,14 +107,14 @@ router.post('/upload-directory', handleUploadWithSizeCheck, batchController.uplo
  *           schema:
  *             type: object
  *             properties:
- *               sessionId:
+ *               workProcessId:
  *                 type: string
- *                 description: Session ID from upload-directory response
+ *                 description: Work Process ID from upload-directory response
  *     responses:
  *       200:
  *         description: Batch processing started successfully
  *       400:
- *         description: No images to process or session ID missing
+ *         description: No images to process or work process ID missing
  *       500:
  *         description: Server error
  */
@@ -122,100 +122,62 @@ router.post('/start-processing', batchController.startBatchProcessing);
 
 /**
  * @swagger
- * /api/batch/status/{sessionId}:
+ * /api/batch/users:
  *   get:
- *     summary: Get processing status for a session
- *     tags: [Batch Processing]
- *     parameters:
- *       - in: path
- *         name: sessionId
- *         required: true
- *         schema:
- *           type: string
- *         description: Session ID
+ *     summary: Get all users
+ *     tags: [Users]
  *     responses:
  *       200:
- *         description: Processing status retrieved successfully
- *       404:
- *         description: Session not found or expired
+ *         description: Users retrieved successfully
  *       500:
  *         description: Server error
  */
-router.get('/status/:sessionId', batchController.getProcessingStatus);
+router.get('/users', batchController.getAllUsers);
 
 /**
  * @swagger
- * /api/batch/active-sessions:
+ * /api/batch/work-process/{workProcessId}:
  *   get:
- *     summary: Get all active processing sessions
- *     tags: [Batch Processing]
+ *     summary: Get work process status by work process ID
+ *     tags: [Work Process]
+ *     parameters:
+ *       - in: path
+ *         name: workProcessId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Work Process ID
  *     responses:
  *       200:
- *         description: Active sessions retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       sessionId:
- *                         type: string
- *                       processingStatus:
- *                         type: object
+ *         description: Work process status retrieved successfully
+ *       404:
+ *         description: Work process not found
  *       500:
  *         description: Server error
  */
-router.get('/active-sessions', batchController.getActiveSessions);
+router.get('/work-process/:workProcessId', batchController.getWorkProcessStatus);
 
 /**
  * @swagger
- * /api/batch/results/{sessionId}:
+ * /api/batch/users/{userId}/work-processes:
  *   get:
- *     summary: Get processing results for a session
- *     tags: [Batch Processing]
+ *     summary: Get active work processes for a user
+ *     tags: [Work Process]
  *     parameters:
  *       - in: path
- *         name: sessionId
+ *         name: userId
  *         required: true
  *         schema:
  *           type: string
- *         description: Session ID
+ *         description: User ID
  *     responses:
  *       200:
- *         description: Processing results retrieved successfully
- *       404:
- *         description: Session not found or expired
+ *         description: Active work processes retrieved successfully
  *       500:
  *         description: Server error
  */
-/**
- * @swagger
- * /api/batch/results/{sessionId}:
- *   get:
- *     summary: Get processing results for a session
- *     tags: [Batch Processing]
- *     parameters:
- *       - in: path
- *         name: sessionId
- *         required: true
- *         schema:
- *           type: string
- *         description: Session ID
- *     responses:
- *       200:
- *         description: Processing results retrieved successfully
- *       404:
- *         description: Session not found or expired
- *       500:
- *         description: Server error
- */
-router.get('/results/:sessionId', batchController.getProcessingResults);
+router.get('/users/:userId/work-processes', batchController.getActiveWorkProcesses);
+
 
 /**
  * @swagger

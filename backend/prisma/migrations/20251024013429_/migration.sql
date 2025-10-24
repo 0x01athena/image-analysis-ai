@@ -25,6 +25,19 @@ CREATE TABLE "users" (
     "updatedAt" DATETIME NOT NULL
 );
 
+-- CreateTable
+CREATE TABLE "work_processes" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "userId" TEXT NOT NULL,
+    "productIds" TEXT NOT NULL,
+    "currentProductId" TEXT,
+    "finishedProducts" INTEGER NOT NULL DEFAULT 0,
+    "isFinished" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "work_processes_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "products_managementNumber_key" ON "products"("managementNumber");
 

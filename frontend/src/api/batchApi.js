@@ -3,13 +3,15 @@ import { API_BASE_URL } from './config.js';
 /**
  * Upload images from directory
  * @param {FileList} files - Array of image files
+ * @param {string} userId - User ID
  * @returns {Promise<Object>} Upload result
  */
-export const uploadDirectoryImages = async (files) => {
+export const uploadDirectoryImages = async (files, userId) => {
     const formData = new FormData();
     Array.from(files).forEach(file => {
         formData.append('images', file);
     });
+    formData.append('userId', userId);
 
     const response = await fetch(`${API_BASE_URL}/batch/upload-directory`, {
         method: 'POST',
@@ -25,16 +27,16 @@ export const uploadDirectoryImages = async (files) => {
 
 /**
  * Start batch processing for uploaded images
- * @param {string} sessionId - Session ID from upload response
+ * @param {string} workProcessId - Work Process ID from upload response
  * @returns {Promise<Object>} Processing start result
  */
-export const startBatchProcessing = async (sessionId) => {
+export const startBatchProcessing = async (workProcessId) => {
     const response = await fetch(`${API_BASE_URL}/batch/start-processing`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ sessionId })
+        body: JSON.stringify({ workProcessId })
     });
 
     return response.json();
@@ -147,6 +149,53 @@ export const selectTitle = async (managementNumber, selectedTitle) => {
     return response.json();
 };
 
+/**
+ * Get all users
+ * @returns {Promise<Object>} Users list
+ */
+export const getAllUsers = async () => {
+    const response = await fetch(`${API_BASE_URL}/batch/users`);
+
+    if (!response.ok) {
+        throw new Error(`Failed to get users: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
+/**
+ * Get work process status by work process ID
+ * @param {string} workProcessId - Work Process ID
+ * @returns {Promise<Object>} Work process status
+ */
+export const getWorkProcessStatus = async (workProcessId) => {
+    const response = await fetch(`${API_BASE_URL}/batch/work-process/${workProcessId}`);
+
+    if (!response.ok) {
+        if (response.status === 404) {
+            return null; // Work process not found
+        }
+        throw new Error(`Failed to get work process status: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
+/**
+ * Get active work processes for a user
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} Active work processes
+ */
+export const getActiveWorkProcesses = async (userId) => {
+    const response = await fetch(`${API_BASE_URL}/batch/users/${userId}/work-processes`);
+
+    if (!response.ok) {
+        throw new Error(`Failed to get active work processes: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
 export const deleteMultipleProducts = async (managementNumbers) => {
     const response = await fetch(`${API_BASE_URL}/batch/products`, {
         method: 'DELETE',
@@ -159,38 +208,6 @@ export const deleteMultipleProducts = async (managementNumbers) => {
     if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to delete products');
-    }
-
-    return response.json();
-};
-
-/**
- * Get processing status for a session
- * @param {string} sessionId - Session ID
- * @returns {Promise<Object>} Processing status
- */
-export const getProcessingStatus = async (sessionId) => {
-    const response = await fetch(`${API_BASE_URL}/batch/status/${sessionId}`);
-
-    if (!response.ok) {
-        if (response.status === 404) {
-            return null; // Session not found or expired
-        }
-        throw new Error(`Failed to get processing status: ${response.statusText}`);
-    }
-
-    return response.json();
-};
-
-/**
- * Get all active processing sessions
- * @returns {Promise<Object>} Active sessions
- */
-export const getActiveSessions = async () => {
-    const response = await fetch(`${API_BASE_URL}/batch/active-sessions`);
-
-    if (!response.ok) {
-        throw new Error(`Failed to get active sessions: ${response.statusText}`);
     }
 
     return response.json();
