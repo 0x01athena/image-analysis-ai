@@ -7,25 +7,28 @@ import BatchProcessingPage from './pages/batch-processing/BatchProcessingPage';
 import ProductsViewPage from './pages/products/ProductsViewPage';
 import ProductDetailsPage from './pages/products/ProductDetailsPage';
 import WorkerRegistrationPage from './pages/workers/WorkerRegistrationPage';
+import { UploadProvider } from './contexts/UploadContext';
 import "./App.css";
 
 function App() {
   return (
-    <Router>
-      <div className="App h-screen flex flex-col">
-        <Navigation />
-        <div className="flex-1 overflow-auto">
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/batch-processing" element={<BatchProcessingPage />} />
-            <Route path="/products" element={<ProductsViewPage />} />
-            <Route path="/products/:managementNumber" element={<ProductDetailsPage />} />
-            <Route path="/workers" element={<WorkerRegistrationPage />} />
-          </Routes>
+    <UploadProvider>
+      <Router>
+        <div className="App h-screen flex flex-col">
+          <Navigation />
+          <div className="flex-1 overflow-auto">
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/batch-processing" element={<BatchProcessingPage />} />
+              <Route path="/products" element={<ProductsViewPage />} />
+              <Route path="/products/:managementNumber" element={<ProductDetailsPage />} />
+              <Route path="/workers" element={<WorkerRegistrationPage />} />
+            </Routes>
+          </div>
         </div>
-      </div>
-    </Router>
+      </Router>
+    </UploadProvider>
   );
 }
 
