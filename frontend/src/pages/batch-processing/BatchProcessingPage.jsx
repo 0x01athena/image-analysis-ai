@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { FolderOpen, Play, CheckCircle, XCircle, Activity, User } from 'lucide-react';
 import { uploadDirectoryImages, startBatchProcessing } from '../../api/batchApi';
 import { useUserSession } from '../../hooks/useUserSession';
+import { API_BASE_URL } from '../../api/config';
 import spinner from '../../assets/spinner.gif';
 
 const BatchProcessingPage = () => {
@@ -22,6 +23,11 @@ const BatchProcessingPage = () => {
         currentProduct: null,
         startTime: null,
         isFinished: false
+    });
+    const [uploadProgress, setUploadProgress] = useState({
+        percentage: 0,
+        filesUploaded: 0,
+        totalFiles: 0
     });
     const fileInputRef = useRef(null);
     const progressIntervalRef = useRef(null);
@@ -210,9 +216,11 @@ const BatchProcessingPage = () => {
 
         setIsUploading(true);
         setIsWorking(true);
+        setUploadProgress({ percentage: 0, filesUploaded: 0, totalFiles: selectedFiles.length });
 
         try {
-            const uploadResult = await uploadDirectoryImages(selectedFiles, selectedUser.id);
+            // Upload with progress tracking
+            const uploadResult = await uploadWithProgress(selectedFiles, selectedUser.id);
             console.log('Upload result:', uploadResult);
 
             if (uploadResult.success) {
@@ -227,6 +235,10 @@ const BatchProcessingPage = () => {
                 };
                 saveCurrentSession(sessionData);
 
+                // Mark upload as complete
+                setUploadProgress(prev => ({ ...prev, percentage: 100 }));
+
+                setIsUploading(false);
                 setIsProcessing(true);
 
                 // Start batch processing using API function with workProcessId
@@ -247,7 +259,56 @@ const BatchProcessingPage = () => {
             setIsUploading(false);
             setIsProcessing(false);
             setIsWorking(false);
+            setUploadProgress({ percentage: 0, filesUploaded: 0, totalFiles: 0 });
         }
+    };
+
+    // Upload with progress tracking using XMLHttpRequest
+    const uploadWithProgress = (files, userId) => {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            const formData = new FormData();
+
+            Array.from(files).forEach(file => {
+                formData.append('images', file);
+            });
+            formData.append('userId', userId);
+
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const percentage = Math.round((e.loaded / e.total) * 100);
+                    setUploadProgress({
+                        percentage,
+                        filesUploaded: selectedFiles.length,
+                        totalFiles: selectedFiles.length
+                    });
+                }
+            });
+
+            xhr.addEventListener('load', () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        resolve(response);
+                    } catch (error) {
+                        reject(new Error('Invalid JSON response'));
+                    }
+                } else {
+                    reject(new Error(`Upload failed: ${xhr.statusText}`));
+                }
+            });
+
+            xhr.addEventListener('error', () => {
+                reject(new Error('Upload failed'));
+            });
+
+            xhr.addEventListener('abort', () => {
+                reject(new Error('Upload aborted'));
+            });
+
+            xhr.open('POST', `${API_BASE_URL}/batch/upload-directory`);
+            xhr.send(formData);
+        });
     };
 
     return (
@@ -264,6 +325,58 @@ const BatchProcessingPage = () => {
                         <h1 className="text-3xl font-bold text-gray-900 mb-4">一括処理 (最大5000点)</h1>
                         <p className="text-gray-600">画像ディレクトリを指定して、管理番号ごとに自動でタイトルを生成します</p>
                     </div>
+
+                    {/* Upload Progress Status */}
+                    {isUploading && (
+                        <div className="mb-8">
+                            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                <Activity className="w-5 h-5 text-blue-600" />
+                                アップロード進行状況
+                            </h2>
+                            <div className="bg-gray-50 rounded-lg p-6">
+                                <div>
+                                    {/* Upload Progress Bar */}
+                                    <div className="mb-4">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <img src={spinner} alt="spinner" className="w-6 h-6 rounded-full" />
+                                                <span className="text-sm font-medium text-gray-700">アップロード進捗</span>
+                                            </div>
+                                            <span className="text-sm font-medium text-blue-600">
+                                                {uploadProgress.percentage}%
+                                            </span>
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-2">
+                                            <motion.div
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${uploadProgress.percentage}%` }}
+                                                transition={{ duration: 0.5 }}
+                                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Status Cards */}
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div className="bg-white rounded-lg p-4 text-center">
+                                            <div className="text-2xl font-bold text-blue-600">{uploadProgress.totalFiles}</div>
+                                            <div className="text-sm text-gray-600">ファイル総数</div>
+                                        </div>
+                                        <div className="bg-white rounded-lg p-4 text-center">
+                                            <div className="text-2xl font-bold text-green-600">{uploadProgress.filesUploaded}</div>
+                                            <div className="text-sm text-gray-600">アップロード完了</div>
+                                        </div>
+                                        <div className="bg-white rounded-lg p-4 text-center">
+                                            <div className="text-lg font-bold text-gray-600">
+                                                {uploadProgress.totalFiles > 0 ? Math.round((uploadProgress.filesUploaded / uploadProgress.totalFiles) * 100) : 0}%
+                                            </div>
+                                            <div className="text-sm text-gray-600">完了率</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* AI Analysis Progress Status */}
                     {isProcessing && (
