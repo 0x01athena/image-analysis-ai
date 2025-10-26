@@ -27,8 +27,12 @@ model Product {
   shop2            String?
   shop3            String?
   images           String   @default("[]") // JSON string for SQLite compatibility
+  userId           String?  // User who processed this product
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  
+  // Relations
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   
   @@map("products")
 }
@@ -41,6 +45,7 @@ model User {
   
   // Relations
   workProcesses WorkProcess[]
+  products      Product[]
   
   @@map("users")
 }

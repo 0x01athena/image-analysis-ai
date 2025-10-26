@@ -284,13 +284,6 @@ const BatchProcessingPage = () => {
                     <div className="mb-8">
                         <h1 className="text-3xl font-bold text-gray-900 mb-4">一括処理 (最大5000点)</h1>
                         <p className="text-gray-600">画像ディレクトリを指定して、管理番号ごとに自動でタイトルを生成します</p>
-                        {isWorking && (
-                            <div className="flex items-center gap-2 mt-4">
-                                <img src={spinner} alt="spinner" className="w-5 h-5" />
-                                {isUploading && <span className="text-gray-600">アップロード中...</span>}
-                                {isProcessing && <span className="text-gray-600">処理中...</span>}
-                            </div>
-                        )}
                     </div>
 
                     {/* AI Analysis Progress Status */}
@@ -322,7 +315,7 @@ const BatchProcessingPage = () => {
                                         </div>
 
                                         {/* Status Cards */}
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                             <div className="bg-white rounded-lg p-4 text-center">
                                                 <div className="text-2xl font-bold text-purple-600">{taskProgress.totalProducts}</div>
                                                 <div className="text-sm text-gray-600">総商品数</div>
@@ -342,29 +335,6 @@ const BatchProcessingPage = () => {
                                                 <div className="text-sm text-gray-600">現在処理中</div>
                                             </div>
                                         </div>
-
-                                        {/* Progress Legend */}
-                                        <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
-                                            <div className="flex items-center gap-1">
-                                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                                <span>画像アップロード</span>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                                                <span>AI分析中</span>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-                                                <span>完了</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Start Time */}
-                                        {taskProgress.startTime && (
-                                            <div className="text-sm text-gray-500">
-                                                開始時刻: {new Date(taskProgress.startTime).toLocaleString('ja-JP')}
-                                            </div>
-                                        )}
                                     </>
                                 ) : (
                                     <div className="text-center py-8">
@@ -382,8 +352,8 @@ const BatchProcessingPage = () => {
                     )}
 
                     {/* User Selection */}
-                    <div className="mb-8">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <div className="mb-5">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
                             <User className="w-5 h-5 text-blue-600" />
                             作業者選択
                         </h2>
@@ -398,7 +368,7 @@ const BatchProcessingPage = () => {
                                     ユーザーの読み込みに失敗しました: {usersError}
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-10">
                                     <select
                                         value={selectedUser?.id || ''}
                                         onChange={(e) => {
@@ -419,7 +389,7 @@ const BatchProcessingPage = () => {
                                     </select>
                                     {selectedUser && (
                                         <div className="flex items-center gap-2 text-sm text-gray-600">
-                                            <User className="w-4 h-4" />
+                                            <User className="w-6 h-6" />
                                             選択中: <span className="font-medium">{selectedUser.username}</span>
                                         </div>
                                     )}
@@ -430,7 +400,7 @@ const BatchProcessingPage = () => {
 
                     {/* Process Completion Message */}
                     {processCompleted && !isWorking && (
-                        <div className="mb-8">
+                        <div className="mb-5">
                             <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
                                 <div className="flex items-center justify-center gap-2 mb-2">
                                     <CheckCircle className="w-6 h-6 text-green-600" />
@@ -476,15 +446,11 @@ const BatchProcessingPage = () => {
                     )}
 
                     {/* Image Directory Selection Section - Disabled when task is active */}
-                    <div className={`mb-8`}>
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">画像ディレクトリ選択</h2>
-                        <p className="text-sm text-gray-600 mb-2">商品画像が保存されているフォルダを選択してください</p>
-                        <p className="text-xs text-orange-600 mb-4 bg-orange-50 px-3 py-2 rounded-lg border border-orange-200">
+                    <div className={`mb-4`}>
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3">画像ディレクトリ選択</h2>
+                        <p className="text-xs text-orange-600 mb-3 bg-orange-50 px-3 py-2 rounded-lg border border-orange-200">
                             ⚠️ ファイルサイズ制限: 各画像ファイルは1MB以下である必要があります
                         </p>
-
-
-
                         <div className="flex gap-3 mb-4">
                             <input
                                 type="text"
@@ -552,7 +518,7 @@ const BatchProcessingPage = () => {
                                 </button>
                             </div>
 
-                            <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-6 pb-4">
                                 <p className="text-sm text-red-800 mb-4">
                                     以下の商品はファイルサイズが1MBを超えるため、アップロードから除外されます。
                                 </p>

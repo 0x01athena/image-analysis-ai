@@ -21,7 +21,10 @@ const ProductsViewPage = () => {
     const [filters, setFilters] = useState({
         rank: searchParams.get('rank') || '',
         date: searchParams.get('date') || '',
-        search: searchParams.get('search') || ''
+        search: searchParams.get('search') || '',
+        worker: searchParams.get('worker') || '',
+        category: searchParams.get('category') || '',
+        condition: searchParams.get('condition') || ''
     });
 
     const loadProducts = async () => {
@@ -31,7 +34,10 @@ const ProductsViewPage = () => {
                 page: currentPage,
                 limit: pageSize,
                 ...(filters.rank && { rank: filters.rank }),
-                ...(filters.date && { date: filters.date })
+                ...(filters.date && { date: filters.date }),
+                ...(filters.worker && { worker: filters.worker }),
+                ...(filters.category && { category: filters.category }),
+                ...(filters.condition && { condition: filters.condition })
             };
 
             const response = await getAllProducts(params);
@@ -77,6 +83,42 @@ const ProductsViewPage = () => {
         updateURLParams({ search: value, page: 1 }); // Reset to page 1 when searching
     };
 
+    const handleClearFilters = () => {
+        setFilters({
+            rank: '',
+            date: '',
+            search: '',
+            worker: '',
+            category: '',
+            condition: ''
+        });
+        updateURLParams({
+            rank: '',
+            date: '',
+            search: '',
+            worker: '',
+            category: '',
+            condition: '',
+            page: 1
+        });
+    };
+
+    // Get unique values for filter dropdowns
+    const getUniqueWorkers = () => {
+        const workers = products.map(p => p.user?.username).filter(Boolean);
+        return [...new Set(workers)].sort();
+    };
+
+    const getUniqueCategories = () => {
+        const categories = products.map(p => p.category).filter(Boolean);
+        return [...new Set(categories)].sort();
+    };
+
+    const getUniqueConditions = () => {
+        const conditions = products.map(p => p.condition).filter(Boolean);
+        return [...new Set(conditions)].sort();
+    };
+
     const handleDirectPageInput = (e) => {
         const value = parseInt(e.target.value);
         if (value >= 1 && value <= totalPages) {
@@ -86,7 +128,7 @@ const ProductsViewPage = () => {
 
     useEffect(() => {
         loadProducts();
-    }, [currentPage, pageSize, filters.rank, filters.date]);
+    }, [currentPage, pageSize, filters.rank, filters.date, filters.worker, filters.category, filters.condition]);
 
     const handleSelectAll = (checked) => {
         if (checked) {
@@ -197,52 +239,108 @@ const ProductsViewPage = () => {
                         <p className="text-gray-600">データベースに保存された商品の一覧を表示します</p>
                     </div>
 
-                    {/* Filters */}
-                    <div className="mb-6 flex flex-wrap gap-4 items-center">
-                        <div className="flex items-center gap-2">
-                            <Filter className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm font-medium text-gray-700">フィルター:</span>
+                    {/* Enhanced Filters */}
+                    <div className="mb-6 bg-gray-50 rounded-lg p-6 pb-2">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <Filter className="w-5 h-5 text-gray-500" />
+                                <span className="text-lg font-semibold text-gray-700">フィルター</span>
+                            </div>
+                            <button
+                                onClick={handleClearFilters}
+                                className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-md transition-colors duration-200"
+                            >
+                                すべてクリア
+                            </button>
                         </div>
 
-                        <select
-                            value={filters.rank}
-                            onChange={(e) => handleFilterChange('rank', e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                            <option value="">生成ランク▼</option>
-                            <option value="A">ランクA</option>
-                            <option value="B">ランクB</option>
-                            <option value="C">ランクC</option>
-                        </select>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4">
+                            {/* Search */}
+                            <div className="relative">
+                                <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="検索..."
+                                    value={filters.search}
+                                    onChange={(e) => handleSearchChange(e.target.value)}
+                                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
 
-                        <input
-                            type="date"
-                            value={filters.date}
-                            onChange={(e) => handleFilterChange('date', e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
+                            {/* Rank Filter */}
+                            <select
+                                value={filters.rank}
+                                onChange={(e) => handleFilterChange('rank', e.target.value)}
+                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                                <option value="">生成ランク</option>
+                                <option value="A">ランクA</option>
+                                <option value="B">ランクB</option>
+                            </select>
 
-                        <div className="relative">
-                            <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                            {/* Worker Filter */}
+                            <select
+                                value={filters.worker}
+                                onChange={(e) => handleFilterChange('worker', e.target.value)}
+                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                                <option value="">作業者</option>
+                                {getUniqueWorkers().map(worker => (
+                                    <option key={worker} value={worker}>{worker}</option>
+                                ))}
+                            </select>
+
+                            {/* Date Filter */}
                             <input
-                                type="text"
-                                placeholder="検索..."
-                                value={filters.search}
-                                onChange={(e) => handleSearchChange(e.target.value)}
-                                className="pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                type="date"
+                                value={filters.date}
+                                onChange={(e) => handleFilterChange('date', e.target.value)}
+                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
                         </div>
 
-                        {selectedProducts.size > 0 && (
+                        {/* Active Filters Display */}
+                        <div className="mt-4 flex flex-wrap gap-2">
+                            {Object.entries(filters).map(([key, value]) => {
+                                if (!value) return null;
+                                const labels = {
+                                    rank: 'ランク',
+                                    worker: '作業者',
+                                    category: 'カテゴリ',
+                                    condition: '状態',
+                                    date: '日付',
+                                    search: '検索'
+                                };
+                                return (
+                                    <span
+                                        key={key}
+                                        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
+                                    >
+                                        {labels[key]}: {key === 'date' ? new Date(value).toLocaleDateString('ja-JP') : value}
+                                        <button
+                                            onClick={() => handleFilterChange(key, '')}
+                                            className="ml-1 text-blue-600 hover:text-blue-800"
+                                        >
+                                            ×
+                                        </button>
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Bulk Actions */}
+                    {selectedProducts.size > 0 && (
+                        <div className="mb-6 flex justify-end">
                             <button
                                 onClick={handleDeleteSelected}
-                                className="ml-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-300 flex items-center gap-2"
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-300 flex items-center gap-2"
                             >
                                 <Trash2 className="w-4 h-4" />
                                 選択した商品を削除 ({selectedProducts.size})
                             </button>
-                        )}
-                    </div>
+                        </div>
+                    )}
 
                     {/* Table */}
                     <div className="overflow-x-auto">
@@ -262,6 +360,7 @@ const ProductsViewPage = () => {
                                     <th className="p-4 text-left font-semibold text-gray-900">生成ランク</th>
                                     <th className="p-4 text-left font-semibold text-gray-900">カテゴリ</th>
                                     <th className="p-4 text-left font-semibold text-gray-900">ランク</th>
+                                    <th className="p-4 text-left font-semibold text-gray-900">作業者</th>
                                     <th className="p-4 text-left font-semibold text-gray-900">作成日</th>
                                     <th className="p-4 text-left font-semibold text-gray-900">操作</th>
                                 </tr>
@@ -269,13 +368,13 @@ const ProductsViewPage = () => {
                             <tbody>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan="7" className="p-8 text-center text-gray-500">
+                                        <td colSpan="8" className="p-8 text-center text-gray-500">
                                             読み込み中...
                                         </td>
                                     </tr>
                                 ) : filteredProducts.length === 0 ? (
                                     <tr>
-                                        <td colSpan="7" className="p-8 text-center text-gray-500">
+                                        <td colSpan="8" className="p-8 text-center text-gray-500">
                                             商品が見つかりません
                                         </td>
                                     </tr>
@@ -311,6 +410,9 @@ const ProductsViewPage = () => {
                                             </td>
                                             <td className="p-4">
                                                 {getRankBadge(product.level)}
+                                            </td>
+                                            <td className="p-4 text-sm text-gray-600">
+                                                {product.user?.username || '未設定'}
                                             </td>
                                             <td className="p-4 text-sm text-gray-600">
                                                 {new Date(product.createdAt).toLocaleDateString('ja-JP')}

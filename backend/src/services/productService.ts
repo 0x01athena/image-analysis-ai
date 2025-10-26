@@ -21,6 +21,7 @@ export interface ProductData {
     shop1?: string | null;
     shop2?: string | null;
     shop3?: string | null;
+    userId?: string | null;
 }
 
 export class ProductService {
@@ -185,6 +186,7 @@ export class ProductService {
             if (data.shop1 !== undefined) updateData.shop1 = data.shop1;
             if (data.shop2 !== undefined) updateData.shop2 = data.shop2;
             if (data.shop3 !== undefined) updateData.shop3 = data.shop3;
+            if (data.userId !== undefined) updateData.userId = data.userId;
 
             const updatedProduct = await prisma.product.update({
                 where: { managementNumber },
@@ -204,7 +206,10 @@ export class ProductService {
     async getProductByManagementNumber(managementNumber: string): Promise<any | null> {
         try {
             return await prisma.product.findUnique({
-                where: { managementNumber }
+                where: { managementNumber },
+                include: {
+                    user: true
+                }
             });
         } catch (error) {
             console.error(`Error getting product ${managementNumber}:`, error);
@@ -218,6 +223,9 @@ export class ProductService {
     async getAllProducts(): Promise<any[]> {
         try {
             return await prisma.product.findMany({
+                include: {
+                    user: true
+                },
                 orderBy: { createdAt: 'desc' }
             });
         } catch (error) {

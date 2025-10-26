@@ -219,6 +219,15 @@ class BatchController {
     private async processProductsAsync(workProcessId: string, productIds: string[]) {
         console.log('Processing products for work process:', workProcessId, 'Products:', productIds);
 
+        // Get work process to get userId
+        const workProcess = await workProcessService.getWorkProcessById(workProcessId);
+        if (!workProcess) {
+            console.error('Work process not found:', workProcessId);
+            return;
+        }
+
+        const userId = workProcess.userId;
+
         for (const productId of productIds) {
             try {
                 // Update current product being processed
@@ -239,7 +248,7 @@ class BatchController {
                 }
 
                 const startTime = Date.now();
-                const result = await this.processSingleProduct(productId, images);
+                const result = await this.processSingleProduct(productId, images, userId);
                 const processingTime = Date.now() - startTime;
 
                 console.log(`Completed processing product ${productId} in ${processingTime}ms`);
@@ -271,7 +280,7 @@ class BatchController {
     /**
      * Process a single product using OpenAI Vision API
      */
-    private async processSingleProduct(productId: string, images: string[]): Promise<void> {
+    private async processSingleProduct(productId: string, images: string[], userId: string): Promise<void> {
         try {
             console.log(`Processing product ${productId} with ${images.length} images using OpenAI...`);
 
@@ -293,7 +302,8 @@ class BatchController {
                 category: analysis.category,
                 shop1: analysis.shop1,
                 shop2: analysis.shop2,
-                shop3: analysis.shop3
+                shop3: analysis.shop3,
+                userId: userId
             });
 
         } catch (error) {
@@ -308,7 +318,8 @@ class BatchController {
                 level: 'C',
                 measurement: '測定不可',
                 condition: '状態不明',
-                category: '未分類'
+                category: '未分類',
+                userId: userId
             });
         }
     }
@@ -319,7 +330,7 @@ class BatchController {
      */
     getAllProducts = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { page = 1, limit = 50, rank, date } = req.query;
+            const { page = 1, limit = 50, rank, date, worker, category, condition, search } = req.query;
 
             const products = await productService.getAllProducts();
 
@@ -336,6 +347,34 @@ class BatchController {
                     const productDate = new Date(p.createdAt);
                     return productDate.toDateString() === targetDate.toDateString();
                 });
+            }
+
+            if (worker) {
+                filteredProducts = filteredProducts.filter((p: any) =>
+                    p.user?.username === worker
+                );
+            }
+
+            if (category) {
+                filteredProducts = filteredProducts.filter((p: any) =>
+                    p.category === category
+                );
+            }
+
+            if (condition) {
+                filteredProducts = filteredProducts.filter((p: any) =>
+                    p.condition === condition
+                );
+            }
+
+            if (search) {
+                const searchTerm = (search as string).toLowerCase();
+                filteredProducts = filteredProducts.filter((p: any) =>
+                    p.title?.toLowerCase().includes(searchTerm) ||
+                    p.managementNumber.toLowerCase().includes(searchTerm) ||
+                    p.category?.toLowerCase().includes(searchTerm) ||
+                    p.condition?.toLowerCase().includes(searchTerm)
+                );
             }
 
             // Apply pagination
