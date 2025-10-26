@@ -4,9 +4,11 @@ import { FolderOpen, Play, CheckCircle, XCircle, Activity, User } from 'lucide-r
 import { uploadDirectoryImages, startBatchProcessing } from '../../api/batchApi';
 import { useUserSession } from '../../hooks/useUserSession';
 import { API_BASE_URL } from '../../api/config';
+import { useUpload } from '../../contexts/UploadContext';
 import spinner from '../../assets/spinner.gif';
 
 const BatchProcessingPage = () => {
+    const { setIsUploading: setGlobalUploading } = useUpload();
     const [directoryPath, setDirectoryPath] = useState('');
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [isWorking, setIsWorking] = useState(false);
@@ -216,6 +218,7 @@ const BatchProcessingPage = () => {
 
         setIsUploading(true);
         setIsWorking(true);
+        setGlobalUploading(true);
         setUploadProgress({ percentage: 0, filesUploaded: 0, totalFiles: selectedFiles.length });
 
         try {
@@ -239,6 +242,7 @@ const BatchProcessingPage = () => {
                 setUploadProgress(prev => ({ ...prev, percentage: 100 }));
 
                 setIsUploading(false);
+                setGlobalUploading(false);
                 setIsProcessing(true);
 
                 // Start batch processing using API function with workProcessId
@@ -257,6 +261,7 @@ const BatchProcessingPage = () => {
             console.error('Error starting batch processing:', error);
             alert('バッチ処理の開始に失敗しました: ' + error.message);
             setIsUploading(false);
+            setGlobalUploading(false);
             setIsProcessing(false);
             setIsWorking(false);
             setUploadProgress({ percentage: 0, filesUploaded: 0, totalFiles: 0 });
