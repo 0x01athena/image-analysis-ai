@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Save, X, Users, UserPlus, Search, Filter, Calendar, SortAsc, SortDesc } from 'lucide-react';
+import { Trash2, Users, UserPlus, Search, Filter } from 'lucide-react';
 import { createUser, getAllUsers, updateUser, deleteUser, deleteMultipleUsers } from '../../api/userApi';
 
 const WorkerRegistrationPage = () => {

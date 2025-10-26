@@ -303,7 +303,7 @@ Bランク → 以下のいずれかに該当する場合。
             return {
                 title: [''],
                 category: '',
-                level: 'C',
+                level: 'B',
                 measurement: '',
                 condition: '',
                 shop1: '',

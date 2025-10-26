@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, FolderOpen, Trophy, Play, Upload, CheckCircle, XCircle, Clock, Activity, BarChart3, TrendingUp, User } from 'lucide-react';
+import { FolderOpen, Play, CheckCircle, XCircle, Activity, User } from 'lucide-react';
 import { uploadDirectoryImages, startBatchProcessing } from '../../api/batchApi';
 import { useUserSession } from '../../hooks/useUserSession';
 import spinner from '../../assets/spinner.gif';
@@ -11,14 +11,7 @@ const BatchProcessingPage = () => {
     const [isWorking, setIsWorking] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [uploadSummary, setUploadSummary] = useState(null);
     const [skippedFiles, setSkippedFiles] = useState([]);
-    const [fileStats, setFileStats] = useState({
-        totalProducts: 0,
-        availableProducts: 0,
-        lockedProducts: 0,
-        uploadedProducts: 0
-    });
     const [lockedProducts, setLockedProducts] = useState([]);
     const [isLockedProductsExpanded, setIsLockedProductsExpanded] = useState(false);
     const [processCompleted, setProcessCompleted] = useState(false);
@@ -188,14 +181,6 @@ const BatchProcessingPage = () => {
         const validFiles = files.filter(file => file.size <= maxFileSize);
         const availableProductIds = [...new Set(validFiles.map(file => extractProductId(file.name)))];
 
-        // Update file statistics
-        setFileStats({
-            totalProducts: allProductIds.length,
-            availableProducts: availableProductIds.length,
-            lockedProducts: lockedProductIds.length,
-            uploadedProducts: 0 // Will be updated after upload
-        });
-
         if (oversizedFiles.length > 0) {
             setSelectedFiles(validFiles);
         } else {
@@ -231,13 +216,7 @@ const BatchProcessingPage = () => {
             console.log('Upload result:', uploadResult);
 
             if (uploadResult.success) {
-                setUploadSummary(uploadResult.data.uploadSummary);
                 setSkippedFiles(uploadResult.data.skippedFiles || []);
-
-                setFileStats(prev => ({
-                    ...prev,
-                    uploadedProducts: uploadResult.data.totalProducts || 0
-                }));
 
                 // Save session to localStorage
                 const sessionData = {
@@ -299,18 +278,21 @@ const BatchProcessingPage = () => {
                                         {/* Overall Progress Bar */}
                                         <div className="mb-6">
                                             <div className="flex justify-between items-center mb-2">
-                                                <span className="text-sm font-medium text-gray-700">全体進捗</span>
+                                                <div className="flex items-center gap-2">
+                                                    <img src={spinner} alt="spinner" className="w-6 h-6 rounded-full" />
+                                                    <span className="text-sm font-medium text-gray-700">全体進捗</span>
+                                                </div>
                                                 <span className="text-sm font-medium text-purple-600">
                                                     {Math.round((taskProgress.completedProducts / taskProgress.totalProducts) * 100)}%
                                                 </span>
                                             </div>
                                             <div className="w-full bg-gray-200 rounded-full h-2">
-                                                <div
+                                                <motion.div
+                                                    initial={{ width: 0 }}
+                                                    animate={{ width: `${(taskProgress.completedProducts / taskProgress.totalProducts) * 100}%` }}
+                                                    transition={{ duration: 0.5 }}
                                                     className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                                                    style={{
-                                                        width: `${(taskProgress.completedProducts / taskProgress.totalProducts) * 100}%`
-                                                    }}
-                                                ></div>
+                                                />
                                             </div>
                                         </div>
 
@@ -339,7 +321,7 @@ const BatchProcessingPage = () => {
                                 ) : (
                                     <div className="text-center py-8">
                                         <div className="flex items-center justify-center gap-2 mb-4">
-                                            <img src={spinner} alt="spinner" className="w-6 h-6" />
+                                            <img src={spinner} alt="spinner" className="w-6 h-6 rounded-full" />
                                             <span className="text-gray-600">処理を開始しています...</span>
                                         </div>
                                         <p className="text-sm text-gray-500">
@@ -360,7 +342,7 @@ const BatchProcessingPage = () => {
                         <div>
                             {usersLoading ? (
                                 <div className="flex items-center gap-2">
-                                    <img src={spinner} alt="spinner" className="w-4 h-4" />
+                                    <img src={spinner} alt="spinner" className="w-4 h-4 rounded-full" />
                                     <span className="text-gray-600">ユーザーを読み込み中...</span>
                                 </div>
                             ) : usersError ? (

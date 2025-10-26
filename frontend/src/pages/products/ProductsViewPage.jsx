@@ -37,7 +37,8 @@ const ProductsViewPage = () => {
                 ...(filters.date && { date: filters.date }),
                 ...(filters.worker && { worker: filters.worker }),
                 ...(filters.category && { category: filters.category }),
-                ...(filters.condition && { condition: filters.condition })
+                ...(filters.condition && { condition: filters.condition }),
+                ...(filters.search && { search: filters.search })
             };
 
             const response = await getAllProducts(params);
@@ -128,7 +129,7 @@ const ProductsViewPage = () => {
 
     useEffect(() => {
         loadProducts();
-    }, [currentPage, pageSize, filters.rank, filters.date, filters.worker, filters.category, filters.condition]);
+    }, [currentPage, pageSize, filters.rank, filters.date, filters.worker, filters.category, filters.condition, filters.search]);
 
     const handleSelectAll = (checked) => {
         if (checked) {
@@ -184,8 +185,6 @@ const ProductsViewPage = () => {
 
                 if (result.data.totalFailed > 0) {
                     alert(`削除完了: ${result.data.totalDeleted}個成功, ${result.data.totalFailed}個失敗\n\n失敗した商品: ${result.data.failed.join(', ')}`);
-                } else {
-                    alert(`${result.data.totalDeleted}個の商品を削除しました`);
                 }
 
                 // Clear selection and reload products
@@ -214,15 +213,6 @@ const ProductsViewPage = () => {
         );
     };
 
-    const filteredProducts = products.filter(product => {
-        if (!filters.search) return true;
-        const searchTerm = filters.search.toLowerCase();
-        return (
-            product.managementNumber.toLowerCase().includes(searchTerm) ||
-            (product.title && product.title.toLowerCase().includes(searchTerm)) ||
-            (product.category && product.category.toLowerCase().includes(searchTerm))
-        );
-    });
 
     return (
         <div className="min-h-full bg-gray-50 py-8">
@@ -350,7 +340,7 @@ const ProductsViewPage = () => {
                                     <th className="p-4 text-left">
                                         <input
                                             type="checkbox"
-                                            checked={selectedProducts.size === filteredProducts.length && filteredProducts.length > 0}
+                                            checked={selectedProducts.size === products.length && products.length > 0}
                                             onChange={(e) => handleSelectAll(e.target.checked)}
                                             className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                                         />
@@ -372,14 +362,14 @@ const ProductsViewPage = () => {
                                             読み込み中...
                                         </td>
                                     </tr>
-                                ) : filteredProducts.length === 0 ? (
+                                ) : products.length === 0 ? (
                                     <tr>
                                         <td colSpan="8" className="p-8 text-center text-gray-500">
                                             商品が見つかりません
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredProducts.map((product) => (
+                                    products.map((product) => (
                                         <motion.tr
                                             key={product.managementNumber}
                                             initial={{ opacity: 0 }}
