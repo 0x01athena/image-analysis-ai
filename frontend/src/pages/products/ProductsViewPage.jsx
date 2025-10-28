@@ -15,7 +15,7 @@ const ProductsViewPage = () => {
 
     // Get pagination params from URL or use defaults
     const currentPage = parseInt(searchParams.get('page')) || 1;
-    const pageSize = parseInt(searchParams.get('size')) || 10;
+    const pageSize = parseInt(searchParams.get('size')) || 100;
     const [totalPages, setTotalPages] = useState(1);
 
     const [filters, setFilters] = useState({
