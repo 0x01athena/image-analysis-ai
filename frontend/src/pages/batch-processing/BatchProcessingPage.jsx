@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FolderOpen, Play, CheckCircle, XCircle, Activity, User } from 'lucide-react';
-import { uploadDirectoryImages, startBatchProcessing } from '../../api/batchApi';
+import { startBatchProcessing } from '../../api/batchApi';
 import { useUserSession } from '../../hooks/useUserSession';
 import { API_BASE_URL } from '../../api/config';
 import { useUpload } from '../../contexts/UploadContext';
@@ -167,9 +167,6 @@ const BatchProcessingPage = () => {
             return filename;
         };
 
-        // Get all unique product IDs from all files
-        const allProductIds = [...new Set(files.map(file => extractProductId(file.name)))];
-
         // Get locked product IDs (from oversized files)
         const lockedProductIds = [...new Set(oversizedFiles.map(file => extractProductId(file.name)))];
 
@@ -189,7 +186,6 @@ const BatchProcessingPage = () => {
 
         // Get available product IDs (from valid files)
         const validFiles = files.filter(file => file.size <= maxFileSize);
-        const availableProductIds = [...new Set(validFiles.map(file => extractProductId(file.name)))];
 
         if (oversizedFiles.length > 0) {
             setSelectedFiles(validFiles);
@@ -256,10 +252,7 @@ const BatchProcessingPage = () => {
                 const processingResult = await startBatchProcessing(uploadResult.data.workProcessId);
                 console.log('Processing started:', processingResult);
 
-                if (processingResult.success) {
-                    // Start monitoring progress
-                    startProgressMonitoring();
-                }
+                if (processingResult.success) startProgressMonitoring();
             } else {
                 throw new Error('Upload failed');
             }

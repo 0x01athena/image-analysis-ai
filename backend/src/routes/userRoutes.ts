@@ -133,7 +133,7 @@ router.put('/:id', userController.updateUser);
 
 /**
  * @swagger
- * /api/users/bulk-delete:
+ * /api/users:
  *   delete:
  *     summary: Delete multiple users
  *     tags: [Users]
@@ -179,6 +179,6 @@ router.put('/:id', userController.updateUser);
  *       500:
  *         description: Server error
  */
-router.delete('/bulk-delete', userController.deleteMultipleUsers);
+router.delete('/', userController.deleteMultipleUsers);
 
 export default router;

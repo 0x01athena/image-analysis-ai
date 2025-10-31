@@ -84,7 +84,7 @@ export const updateUser = async (id, updateData) => {
  * @returns {Promise<Object>} Bulk delete result
  */
 export const deleteMultipleUsers = async (ids) => {
-    const response = await fetch(`${API_BASE_URL}/users/bulk-delete`, {
+    const response = await fetch(`${API_BASE_URL}/users/`, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json',
