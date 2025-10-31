@@ -82,11 +82,14 @@ class BatchController {
             // Get upload summary before saving
             const uploadSummary = await productService.getUploadSummary(productImages);
 
+            // Get price and userId from request body
+            const { userId, price } = req.body;
+            const priceValue = price !== undefined && price !== null ? parseFloat(price as string) : null;
+
             // Save products to database
-            const savedProducts = await productService.saveProductsFromImages(productImages);
+            const savedProducts = await productService.saveProductsFromImages(productImages, priceValue);
 
             // Validate user ID
-            const { userId } = req.body;
             if (!userId) {
                 res.status(400).json({
                     success: false,
@@ -630,8 +633,6 @@ class BatchController {
                 });
                 return;
             }
-
-            console.log('Work process status:', workProcess);
 
             res.status(200).json({
                 success: true,

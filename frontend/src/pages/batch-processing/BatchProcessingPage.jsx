@@ -31,6 +31,7 @@ const BatchProcessingPage = () => {
         filesUploaded: 0,
         totalFiles: 0
     });
+    const [price, setPrice] = useState('');
     const fileInputRef = useRef(null);
     const progressIntervalRef = useRef(null);
 
@@ -110,6 +111,7 @@ const BatchProcessingPage = () => {
         // Clear form
         setSelectedFiles([]);
         setDirectoryPath('');
+        setPrice('');
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -223,7 +225,7 @@ const BatchProcessingPage = () => {
 
         try {
             // Upload with progress tracking
-            const uploadResult = await uploadWithProgress(selectedFiles, selectedUser.id);
+            const uploadResult = await uploadWithProgress(selectedFiles, selectedUser.id, price);
             console.log('Upload result:', uploadResult);
 
             if (uploadResult.success) {
@@ -269,7 +271,7 @@ const BatchProcessingPage = () => {
     };
 
     // Upload with progress tracking using XMLHttpRequest
-    const uploadWithProgress = (files, userId) => {
+    const uploadWithProgress = (files, userId, priceValue) => {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             const formData = new FormData();
@@ -278,6 +280,9 @@ const BatchProcessingPage = () => {
                 formData.append('images', file);
             });
             formData.append('userId', userId);
+            if (priceValue && priceValue !== '') {
+                formData.append('price', priceValue);
+            }
 
             xhr.upload.addEventListener('progress', (e) => {
                 if (e.lengthComputable) {
@@ -468,28 +473,47 @@ const BatchProcessingPage = () => {
                                     ユーザーの読み込みに失敗しました: {usersError}
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-10">
-                                    <select
-                                        value={selectedUser?.id || ''}
-                                        onChange={(e) => {
-                                            const user = users.find(u => u.id === e.target.value);
-                                            if (user) {
-                                                saveSelectedUser(user);
-                                            }
-                                        }}
-                                        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        disabled={isInterfaceDisabled}
-                                    >
-                                        <option value="">作業者を選択してください</option>
-                                        {users.map(user => (
-                                            <option key={user.id} value={user.id}>
-                                                {user.username}
-                                            </option>
-                                        ))}
-                                    </select>
+                                <div className="flex flex-col gap-4">
+                                    <div className="flex items-center gap-10">
+                                        <div className="flex items-center gap-3">
+                                            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">作業者:</label>
+                                            <select
+                                                value={selectedUser?.id || ''}
+                                                onChange={(e) => {
+                                                    const user = users.find(u => u.id === e.target.value);
+                                                    if (user) {
+                                                        saveSelectedUser(user);
+                                                    }
+                                                }}
+                                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                disabled={isInterfaceDisabled}
+                                            >
+                                                <option value="">作業者を選択してください</option>
+                                                {users.map(user => (
+                                                    <option key={user.id} value={user.id}>
+                                                        {user.username}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">価格:</label>
+                                            <input
+                                                type="number"
+                                                value={price}
+                                                onChange={(e) => setPrice(e.target.value)}
+                                                placeholder="価格を入力"
+                                                min="0"
+                                                step="0.01"
+                                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-40"
+                                                disabled={isInterfaceDisabled}
+                                            />
+                                            <span className="text-sm text-gray-600">円</span>
+                                        </div>
+                                    </div>
                                     {selectedUser && (
                                         <div className="flex items-center gap-2 text-sm text-gray-600">
-                                            <User className="w-6 h-6" />
+                                            <User className="w-5 h-5" />
                                             選択中: <span className="font-medium">{selectedUser.username}</span>
                                         </div>
                                     )}

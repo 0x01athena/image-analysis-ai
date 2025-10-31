@@ -36,6 +36,7 @@ export const useUserSession = () => {
     const loadSelectedUser = () => {
         try {
             const storedUser = localStorage.getItem(STORAGE_KEYS.SELECTED_USER);
+            console.log('storedUser', storedUser);
             if (storedUser) {
                 const user = JSON.parse(storedUser);
                 setSelectedUser(user);
@@ -49,6 +50,7 @@ export const useUserSession = () => {
     const loadCurrentSession = () => {
         try {
             const storedSession = localStorage.getItem(STORAGE_KEYS.CURRENT_SESSION);
+            console.log('storedSession', storedSession);
             if (storedSession) {
                 const session = JSON.parse(storedSession);
                 setCurrentSession(session);
@@ -119,8 +121,11 @@ export const useUserSession = () => {
     useEffect(() => {
         loadUsers();
         loadSelectedUser();
-        loadCurrentSession();
     }, []);
+
+    useEffect(() => {
+        loadCurrentSession();
+    }, [selectedUser])
 
     return {
         users,

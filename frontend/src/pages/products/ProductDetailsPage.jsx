@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Save, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProduct, updateProduct, deleteProduct, getAllProducts, getCandidateTitles, selectTitle } from '../../api/batchApi';
+import { getProduct, updateProduct, deleteProduct, getAllProducts, selectTitle } from '../../api/batchApi';
 
 const ProductDetailsPage = () => {
     const { managementNumber } = useParams();
@@ -48,7 +48,8 @@ const ProductDetailsPage = () => {
                 category: productData.category || '',
                 shop1: productData.shop1 || '',
                 shop2: productData.shop2 || '',
-                shop3: productData.shop3 || ''
+                shop3: productData.shop3 || '',
+                price: productData.price || ''
             });
         } catch (error) {
             console.error('Error loading product:', error);
@@ -80,7 +81,13 @@ const ProductDetailsPage = () => {
     const handleSave = async () => {
         try {
             setSaving(true);
-            await updateProduct(managementNumber, formData);
+            // Prepare data with proper price formatting
+            const saveData = {
+                ...formData,
+                price: formData.price && formData.price !== '' ? parseFloat(formData.price) : null,
+                measurementType: formData.measurementType ? JSON.stringify(formData.measurementType) : null
+            };
+            await updateProduct(managementNumber, saveData);
             await loadProduct();
             alert('商品情報を保存しました');
         } catch (error) {
@@ -376,18 +383,39 @@ const ProductDetailsPage = () => {
                                 </div>
                             </div>
 
-                            {/* Generation Rank */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    生成ランク
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.level}
-                                    onChange={(e) => handleInputChange('level', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    placeholder="A, B, C"
-                                />
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* Generation Rank */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        生成ランク
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.level}
+                                        onChange={(e) => handleInputChange('level', e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        placeholder="A, B, C"
+                                    />
+                                </div>
+
+                                {/* Price */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        価格
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            value={formData.price}
+                                            onChange={(e) => handleInputChange('price', e.target.value)}
+                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="価格を入力"
+                                            min="0"
+                                            step="0.01"
+                                        />
+                                        <span className="text-sm text-gray-600 whitespace-nowrap">円</span>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Measurements */}
