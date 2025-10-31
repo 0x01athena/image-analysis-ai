@@ -4,4 +4,10 @@ node_modules
 .env
 
 /src/generated/prisma
-/prisma/migrations
+prisma/migrations
+prisma/migrations/
+prisma/migrations/**
+**/prisma/migrations/**
+*.db
+*.sqlite
+*.sqlite3
