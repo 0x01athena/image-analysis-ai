@@ -119,6 +119,8 @@ backend/dist/
 backend/build/
 backend/public/
 backend/prisma/migrations/
+backend/prisma/migration/
+backend/prisma/**/migrations/
 backend/.env
 backend/.env.local
 backend/.env.development.local
