@@ -50,7 +50,7 @@ const BatchProcessingPage = () => {
 
     // Check if there's an active task (upload or AI analysis in progress)
     const isInterfaceDisabled = isUploading || isProcessing;
-    const canStartProcessing = selectedUser && selectedFiles.length > 0 && !isInterfaceDisabled;
+    const canStartProcessing = !usersLoading && selectedUser && selectedFiles.length > 0 && !isInterfaceDisabled;
 
     // Function to check task progress
     const checkTaskProgress = async () => {
@@ -208,7 +208,12 @@ const BatchProcessingPage = () => {
     };
 
     const handleStartBatchProcessing = async () => {
-        if (!selectedUser) {
+        if (usersLoading) {
+            alert('ユーザー情報を読み込み中です。しばらくお待ちください。');
+            return;
+        }
+
+        if (!selectedUser || !selectedUser.id) {
             alert('作業者を選択してください');
             return;
         }
@@ -682,13 +687,18 @@ const BatchProcessingPage = () => {
                         <div className="text-center">
                             <button
                                 onClick={handleStartBatchProcessing}
-                                disabled={!canStartProcessing}
-                                className={`px-12 py-4 rounded-xl text-lg font-semibold shadow-lg transition-all duration-300 flex items-center gap-3 mx-auto ${!canStartProcessing
+                                disabled={!canStartProcessing || usersLoading}
+                                className={`px-12 py-4 rounded-xl text-lg font-semibold shadow-lg transition-all duration-300 flex items-center gap-3 mx-auto ${!canStartProcessing || usersLoading
                                     ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                                     : 'bg-purple-600 text-white hover:bg-purple-700 hover:shadow-xl'
                                     }`}
                             >
-                                {!selectedUser ? (
+                                {usersLoading ? (
+                                    <>
+                                        <img src={spinner} alt="spinner" className="w-5 h-5 rounded-full" />
+                                        ユーザーを読み込み中...
+                                    </>
+                                ) : !selectedUser ? (
                                     <>
                                         <User className="w-5 h-5" />
                                         作業者を選択してください

@@ -133,29 +133,6 @@ router.put('/:id', userController.updateUser);
 
 /**
  * @swagger
- * /api/users/{id}:
- *   delete:
- *     summary: Delete user
- *     tags: [Users]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID
- *     responses:
- *       200:
- *         description: User deleted successfully
- *       404:
- *         description: User not found
- *       500:
- *         description: Server error
- */
-router.delete('/:id', userController.deleteUser);
-
-/**
- * @swagger
  * /api/users/bulk-delete:
  *   delete:
  *     summary: Delete multiple users

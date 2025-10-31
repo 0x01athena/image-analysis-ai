@@ -79,24 +79,6 @@ export const updateUser = async (id, updateData) => {
 };
 
 /**
- * Delete user
- * @param {string} id - User ID
- * @returns {Promise<Object>} Delete result
- */
-export const deleteUser = async (id) => {
-    const response = await fetch(`${API_BASE_URL}/users/${id}`, {
-        method: 'DELETE'
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete user');
-    }
-
-    return response.json();
-};
-
-/**
  * Delete multiple users
  * @param {string[]} ids - Array of user IDs
  * @returns {Promise<Object>} Bulk delete result
