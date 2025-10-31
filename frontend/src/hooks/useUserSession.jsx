@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getAllUsers, getWorkProcessStatus, getActiveWorkProcesses } from '../api/batchApi';
 
 const STORAGE_KEYS = {
@@ -45,18 +45,39 @@ export const useUserSession = () => {
         }
     };
 
-    // Load current session from localStorage
-    const loadCurrentSession = () => {
+    // Load current session from database (active work processes)
+    const loadCurrentSession = useCallback(async () => {
+        if (!selectedUser) {
+            setCurrentSession(null);
+            return;
+        }
+
         try {
-            const storedSession = localStorage.getItem(STORAGE_KEYS.CURRENT_SESSION);
-            if (storedSession) {
-                const session = JSON.parse(storedSession);
+            const response = await getActiveWorkProcesses(selectedUser.id);
+            if (response.success && response.data && response.data.length > 0) {
+                // Get the most recent active work process (already sorted by createdAt desc)
+                const mostRecentProcess = response.data[0];
+
+                // Format it to match the expected session structure
+                const session = {
+                    workProcessId: mostRecentProcess.id,
+                    userId: mostRecentProcess.userId,
+                    startTime: mostRecentProcess.createdAt,
+                    productCount: Array.isArray(mostRecentProcess.productIds)
+                        ? mostRecentProcess.productIds.length
+                        : 0
+                };
+
                 setCurrentSession(session);
+            } else {
+                // No active work processes found
+                setCurrentSession(null);
             }
         } catch (err) {
-            console.error('Error loading current session from localStorage:', err);
+            console.error('Error loading current session from database:', err);
+            setCurrentSession(null);
         }
-    };
+    }, [selectedUser]);
 
     // Save selected user to localStorage
     const saveSelectedUser = (user) => {
@@ -119,8 +140,16 @@ export const useUserSession = () => {
     useEffect(() => {
         loadUsers();
         loadSelectedUser();
-        loadCurrentSession();
     }, []);
+
+    // Load current session from database when selectedUser changes
+    useEffect(() => {
+        if (selectedUser) {
+            loadCurrentSession();
+        } else {
+            setCurrentSession(null);
+        }
+    }, [selectedUser, loadCurrentSession]);
 
     return {
         users,

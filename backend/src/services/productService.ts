@@ -21,6 +21,7 @@ export interface ProductData {
     shop1?: string | null;
     shop2?: string | null;
     shop3?: string | null;
+    price?: number | null;
     userId?: string | null;
 }
 
@@ -28,7 +29,7 @@ export class ProductService {
     /**
      * Save products to database from product images mapping with duplicate detection
      */
-    async saveProductsFromImages(productImages: ProductImages): Promise<any[]> {
+    async saveProductsFromImages(productImages: ProductImages, price?: number | null): Promise<any[]> {
         const savedProducts = [];
 
         for (const [managementNumber, newImages] of Object.entries(productImages)) {
@@ -48,16 +49,25 @@ export class ProductService {
                     // Check for duplicates and merge images intelligently
                     const mergedImages = this.mergeImagesWithDuplicateDetection(existingImages, processedNewImages);
 
+                    // Prepare update data
+                    const updateData: any = {
+                        images: JSON.stringify(mergedImages),
+                        updatedAt: new Date()
+                    };
+
+                    // Update price if provided
+                    if (price !== undefined && price !== null) {
+                        updateData.price = price;
+                    }
+
                     // Only update if there are actual changes
                     if (mergedImages.length !== existingImages.length ||
-                        !this.arraysEqual(mergedImages, existingImages)) {
+                        !this.arraysEqual(mergedImages, existingImages) ||
+                        (price !== undefined && price !== null && existingProduct.price !== price)) {
 
                         const updatedProduct = await prisma.product.update({
                             where: { managementNumber },
-                            data: {
-                                images: JSON.stringify(mergedImages),
-                                updatedAt: new Date()
-                            }
+                            data: updateData
                         });
                         savedProducts.push(updatedProduct);
                     } else {
@@ -81,7 +91,8 @@ export class ProductService {
                             category: null,
                             shop1: null,
                             shop2: null,
-                            shop3: null
+                            shop3: null,
+                            price: price !== undefined && price !== null ? price : null
                         }
                     });
                     savedProducts.push(newProduct);
@@ -186,6 +197,7 @@ export class ProductService {
             if (data.shop1 !== undefined) updateData.shop1 = data.shop1;
             if (data.shop2 !== undefined) updateData.shop2 = data.shop2;
             if (data.shop3 !== undefined) updateData.shop3 = data.shop3;
+            if (data.price !== undefined) updateData.price = data.price !== null ? parseFloat(data.price as any) : null;
             if (data.userId !== undefined) updateData.userId = data.userId;
 
             const updatedProduct = await prisma.product.update({

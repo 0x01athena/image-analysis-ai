@@ -26,6 +26,7 @@ model Product {
   shop1            String?
   shop2            String?
   shop3            String?
+  price            Float?   // Price for the product
   images           String   @default("[]") // JSON string for SQLite compatibility
   userId           String?  // User who processed this product
   createdAt        DateTime @default(now())
