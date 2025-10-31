@@ -278,7 +278,7 @@ const WorkerRegistrationPage = () => {
                     </div>
 
                     <div className="flex items-center space-x-4">
-                        {selectedUsers.size > 0 && (
+                        {/* {selectedUsers.size > 0 && (
                             <button
                                 onClick={handleBulkDelete}
                                 disabled={deleting}
@@ -287,7 +287,7 @@ const WorkerRegistrationPage = () => {
                                 <Trash2 className="w-4 h-4" />
                                 <span>選択削除 ({selectedUsers.size})</span>
                             </button>
-                        )}
+                        )} */}
 
                         <button
                             onClick={() => setShowAddForm(true)}
@@ -571,12 +571,12 @@ const WorkerRegistrationPage = () => {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                 <div className="flex items-center space-x-2">
-                                                    <button
+                                                    {/* <button
                                                         onClick={() => handleEdit(user)}
                                                         className="text-blue-600 hover:text-blue-900 transition-colors duration-300"
                                                     >
                                                         <Edit2 className="w-4 h-4" />
-                                                    </button>
+                                                    </button> */}
                                                     <button
                                                         onClick={() => handleDelete(user)}
                                                         className="text-red-600 hover:text-red-900 transition-colors duration-300"
