@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Edit2, Trash2, Save, X, Users, UserPlus, Search, Filter, SortAsc, SortDesc } from 'lucide-react';
-import { createUser, getAllUsers, updateUser, deleteUser, deleteMultipleUsers } from '../../api/userApi';
+import { createUser, getAllUsers, updateUser, deleteMultipleUsers } from '../../api/userApi';
 
 const WorkerRegistrationPage = () => {
     const [users, setUsers] = useState([]);
@@ -163,7 +163,7 @@ const WorkerRegistrationPage = () => {
         }
 
         try {
-            await deleteUser(user.id);
+            await deleteMultipleUsers([user.id]);
             alert('ユーザーが正常に削除されました');
             loadUsers();
         } catch (error) {

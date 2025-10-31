@@ -154,38 +154,6 @@ class UserController {
     };
 
     /**
-     * Delete user
-     */
-    deleteUser = async (req: Request, res: Response): Promise<void> => {
-        try {
-            const { id } = req.params;
-
-            // Check if user exists
-            const existingUser = await userService.getUserById(id);
-            if (!existingUser) {
-                res.status(404).json({
-                    success: false,
-                    message: 'User not found'
-                });
-                return;
-            }
-
-            await userService.deleteUser(id);
-
-            res.status(200).json({
-                success: true,
-                message: 'User deleted successfully'
-            });
-        } catch (error) {
-            console.error('Error deleting user:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Internal server error'
-            });
-        }
-    };
-
-    /**
      * Delete multiple users
      */
     deleteMultipleUsers = async (req: Request, res: Response): Promise<void> => {

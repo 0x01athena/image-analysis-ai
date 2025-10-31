@@ -28,7 +28,6 @@ const ProductDetailsPage = () => {
 
             // Parse images from JSON string
             const productImages = JSON.parse(productData.images || '[]');
-            console.log('Loaded product images:', productImages);
             setImages(productImages);
 
             // Parse candidate titles from JSON string
