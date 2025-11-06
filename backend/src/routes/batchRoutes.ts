@@ -159,6 +159,29 @@ router.get('/work-process/:workProcessId', batchController.getWorkProcessStatus)
 
 /**
  * @swagger
+ * /api/batch/work-process/{workProcessId}/finish:
+ *   put:
+ *     summary: Mark work process as finished
+ *     tags: [Work Process]
+ *     parameters:
+ *       - in: path
+ *         name: workProcessId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Work Process ID
+ *     responses:
+ *       200:
+ *         description: Work process marked as finished successfully
+ *       400:
+ *         description: Work Process ID is required
+ *       500:
+ *         description: Server error
+ */
+router.put('/work-process/:workProcessId/finish', batchController.markWorkProcessFinished);
+
+/**
+ * @swagger
  * /api/batch/users/{userId}/work-processes:
  *   get:
  *     summary: Get active work processes for a user

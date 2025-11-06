@@ -182,6 +182,26 @@ export const getWorkProcessStatus = async (workProcessId) => {
 };
 
 /**
+ * Mark work process as finished
+ * @param {string} workProcessId - Work Process ID
+ * @returns {Promise<Object>} Result
+ */
+export const markWorkProcessFinished = async (workProcessId) => {
+    const response = await fetch(`${API_BASE_URL}/batch/work-process/${workProcessId}/finish`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to mark work process as finished: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
+/**
  * Get active work processes for a user
  * @param {string} userId - User ID
  * @returns {Promise<Object>} Active work processes

@@ -650,6 +650,39 @@ class BatchController {
     };
 
     /**
+     * Mark work process as finished
+     */
+    markWorkProcessFinished = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { workProcessId } = req.params;
+
+            if (!workProcessId) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Work Process ID is required'
+                });
+                return;
+            }
+
+            const workProcess = await workProcessService.markWorkProcessFinished(workProcessId);
+
+            res.status(200).json({
+                success: true,
+                message: 'Work process marked as finished',
+                data: workProcess
+            });
+
+        } catch (error) {
+            console.error('Error marking work process as finished:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to mark work process as finished',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
      * Get active work processes for a user
      */
     getActiveWorkProcesses = async (req: Request, res: Response): Promise<void> => {
