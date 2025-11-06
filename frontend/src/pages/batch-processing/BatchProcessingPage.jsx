@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FolderOpen, Play, CheckCircle, XCircle, Activity, User } from 'lucide-react';
-import { startBatchProcessing } from '../../api/batchApi';
+import { startBatchProcessing, markWorkProcessFinished } from '../../api/batchApi';
 import { useUserSession } from '../../hooks/useUserSession';
 import { API_BASE_URL } from '../../api/config';
 import { useUpload } from '../../contexts/UploadContext';
@@ -133,6 +133,49 @@ const BatchProcessingPage = () => {
         }, 3000);
     };
 
+    // Handle clearing current work process session
+    const handleClearWorkProcess = async () => {
+        if (!currentSession?.workProcessId) {
+            alert('クリアする作業プロセスがありません');
+            return;
+        }
+
+        const confirmMessage = '現在の作業プロセスをクリアしますか？\n\nこの操作により、進行中の作業プロセスの追跡が停止され、データベースで作業プロセスが完了としてマークされます。';
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
+        try {
+            // Mark work process as finished in backend
+            await markWorkProcessFinished(currentSession.workProcessId);
+
+            // Stop progress monitoring
+            stopProgressMonitoring();
+
+            // Clear session from localStorage
+            clearCurrentSession();
+
+            // Reset processing states
+            setIsProcessing(false);
+            setIsUploading(false);
+            setIsWorking(false);
+
+            // Reset task progress
+            setTaskProgress({
+                totalProducts: 0,
+                completedProducts: 0,
+                failedProducts: 0,
+                currentProduct: null,
+                startTime: null,
+                isFinished: false
+            });
+        } catch (error) {
+            console.error('Error clearing work process:', error);
+            alert('作業プロセスのクリアに失敗しました: ' + error.message);
+        }
+    };
+
     // Initialize task monitoring on page load
     useEffect(() => {
         if (currentSession?.workProcessId) {
@@ -209,8 +252,14 @@ const BatchProcessingPage = () => {
             return;
         }
 
-        if (!selectedUser || !selectedUser.id) {
+        // Validate user session exists and is valid
+        if (!selectedUser) {
             alert('作業者を選択してください');
+            return;
+        }
+
+        if (!selectedUser.id) {
+            alert('作業者情報が無効です。もう一度選択してください。');
             return;
         }
 
@@ -219,6 +268,9 @@ const BatchProcessingPage = () => {
             return;
         }
 
+        // Store userId in a variable to prevent it from changing during upload
+        const userId = selectedUser.id;
+
         setIsUploading(true);
         setIsWorking(true);
         setGlobalUploading(true);
@@ -226,7 +278,7 @@ const BatchProcessingPage = () => {
 
         try {
             // Upload with progress tracking
-            const uploadResult = await uploadWithProgress(selectedFiles, selectedUser.id, price);
+            const uploadResult = await uploadWithProgress(selectedFiles, userId, price);
             console.log('Upload result:', uploadResult);
 
             if (uploadResult.success) {
@@ -259,7 +311,20 @@ const BatchProcessingPage = () => {
 
         } catch (error) {
             console.error('Error starting batch processing:', error);
-            alert('バッチ処理の開始に失敗しました: ' + error.message);
+            
+            // Provide more specific error messages
+            let errorMessage = 'バッチ処理の開始に失敗しました';
+            if (error.message) {
+                if (error.message.includes('ユーザーIDが無効')) {
+                    errorMessage = error.message;
+                } else if (error.message.includes('User ID is required')) {
+                    errorMessage = 'ユーザーIDが必要です。作業者を選択してください。';
+                } else {
+                    errorMessage += ': ' + error.message;
+                }
+            }
+            
+            alert(errorMessage);
             setIsUploading(false);
             setGlobalUploading(false);
             setIsProcessing(false);
@@ -271,6 +336,12 @@ const BatchProcessingPage = () => {
     // Upload with progress tracking using XMLHttpRequest
     const uploadWithProgress = (files, userId, priceValue) => {
         return new Promise((resolve, reject) => {
+            // Validate userId before proceeding
+            if (!userId || typeof userId !== 'string') {
+                reject(new Error('ユーザーIDが無効です。作業者を選択してください。'));
+                return;
+            }
+
             const xhr = new XMLHttpRequest();
             const formData = new FormData();
 
@@ -456,10 +527,22 @@ const BatchProcessingPage = () => {
 
                     {/* User Selection */}
                     <div className="mb-5">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                            <User className="w-5 h-5 text-blue-600" />
-                            作業者選択
-                        </h2>
+                        <div className="flex items-center justify-between mb-2">
+                            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                <User className="w-5 h-5 text-blue-600" />
+                                作業者選択
+                            </h2>
+                            {currentSession?.workProcessId && (
+                                <button
+                                    onClick={handleClearWorkProcess}
+                                    className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-300 flex items-center gap-2"
+                                    title="現在の作業プロセスをクリア"
+                                >
+                                    <XCircle className="w-4 h-4" />
+                                    現在の作業プロセスをクリア
+                                </button>
+                            )}
+                        </div>
                         <div>
                             {usersLoading ? (
                                 <div className="flex items-center gap-2">
