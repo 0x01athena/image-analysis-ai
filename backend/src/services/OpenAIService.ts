@@ -9,6 +9,7 @@ dotenv.config({ path: path.join(__dirname, '../../.env') });
 export interface OpenAIProductAnalysis {
     title: string[];
     category: string;
+    categoryList: string[];
     level: 'A' | 'B' | 'C';
     measurement?: string;
     measurement_type?: { foreign: string; japanese: string };
@@ -47,91 +48,6 @@ export class OpenAIService {
                     };
                 })
             );
-
-            //             const prompt = `
-            // You are an expert in Japanese e-commerce cataloging and product title generation for online stores like Rakuten, Yahoo! Shopping, and Mercari.
-            // Analyze these product images and provide detailed information in JSON format, and it must be in Japanese, not foreign language.
-
-            // 1. Level:
-            // Evaluate the generation result and assign a 生成ランク (A/B/C) score.
-            // A → The correct brand and model number are accurately identified **from the image itself**.
-            // B → The image is unclear or lacks enough information to make a precise identification, **but some data is correctly extracted or partially identified from the image**.
-            // C → The response is not generated from the image.
-
-            // 2. Title
-            //     Your goal is to accurately generate the official or commonly used product name (正式名称)
-            //     based on the brand tag, model number, and product image.
-
-            //     You must use:
-            //     - Visual analysis to detect and read brand, model number, and category.
-            //     - Web search (brand + model number) to verify or refine the product name.
-            //     - Visual matching to confirm that search results align with the image (color, material, type).
-            //     - Generate at least 5 possible product titles in Japanese, ranked by confidence.
-
-            //     Each title must:
-            //     - Follow standard e-commerce naming conventions used in Japan (Rakuten, ZOZOTOWN, etc.).
-            //     - Be natural and factual — no extra adjectives or speculation.
-            //     - Include the brand, product/series name, model number, material/color/size if visible, and category.
-            //     - Be between 40–80 Japanese characters for balance.
-            //     - Avoid “写真の通り” or uncertain terms like “っぽい”.
-
-            //     If the web search shows different versions, reflect those variations across the 5 outputs.
-
-            //     - If the detected brand name is written in a foreign language (English, French, Italian, etc.),
-            //     **convert for brand name in foreign language into Katakana** form that matches how it is used in Japan.
-
-            //     - Example:
-            //         - "Chanel" → "シャネル"
-            //         - "Nike" → "ナイキ"
-            //         - "Prada" → "プラダ"
-            //         - "Louis Vuitton" → "ルイ・ヴィトン"
-            //     - Use the Katakana form consistently in all output titles.
-
-            //     - Color:
-            //         - Always append "系" after the detected color name.
-            //         - Example: ブラック → ブラック系, ブルー → ブルー系, ベージュ → ベージュ系.
-            //         - If the detected color name already ends with "系", do not duplicate it (e.g., "ブラック系系" → "ブラック系").
-
-            //     Example: [
-            //         "アルマーニ　ダブルライダース ジャケット　L　メンズ",
-            //         "アルマーニ　アルマーニ　ネイティブダブルライダースジャケット　L　メンズ",
-            //         "アルマーニ　アルマーニ　ヴィンテージ風ダブルライダースジャケット　L　メンズ",
-            //         "アルマーニ　アルマーニ　ワイドダブルライダースジャケット　L　メンズ",
-            //         "アルマーニ　アルマーニ　ステッチダブルライダースジャケット　L　メンズ",
-            //         "アルマーニ　アルマーニ　レザージャケットジャケット　L　メンズ"
-            //     ]
-
-            // 3. Category: '123'
-            // 4. Measurement: 
-            // For example: "着丈:65 肩幅:45 身幅:50 袖丈:20"
-            // If the measurement is not visible in the image, return empty string.
-            // 5. Condition: '1'
-            // 6. Shop1: '123'
-            // 7. Shop2: '123'
-            // 8. Shop3: '123'
-
-            // Please only analyze the product and return a valid JSON object with the following structure:
-            // {
-            //     "title": [],
-            //     "level",
-            //     "measurement",
-            //     "category",
-            //     "condition",
-            //     "shop1",
-            //     "shop2",
-            //     "shop3"
-            // }
-            // **DO NOT CONTAIN \`\`\`json and \`\`\` in the response, just return a valid JSON data
-            // `;
-
-            // ### 1. 生成ランク (level)
-            // 画像認識結果の精度に基づいて、以下のルールでランクを判定してください。
-
-            // A → 画像から **正確にブランド名と型番が特定できた** 場合。  
-            // B → 画像の内容に基づかず、**外部情報や推測に依存している** 場合。
-
-            // 出力は必ず "A" / "B" のいずれか1文字で。
-
 
             const prompt = `
 あなたは日本のECサイト（楽天市場、Yahoo!ショッピング、メルカリなど）向けの商品カタログ作成と商品タイトル生成の専門家です。
@@ -191,6 +107,7 @@ Bランク → 以下のいずれかに該当する場合。
 - 自信順に5件生成。
 - 各タイトルは40～80文字程度で、日本のECサイトで一般的な表現を使用。
 - 確定できない情報の推測は禁止（「同じ」、「写真通り」などは使用しない）。
+- 必ず商品の性別を判別して生成する。
 
 **ブランド名表記と文字数制限ルール**
 外国ブランド名は必ずカタカナ表記＋英字表記をすべて生成する。
@@ -209,7 +126,7 @@ Bランク → 以下のいずれかに該当する場合。
 **性別カテゴリ（対象）**
 - 画像またはタグの情報から、商品が「男性」、「女性」、「子供」のいずれかを決定する。
 - 服の形、サイズ表記（例：MENS / WOMENS / BOYS / GIRLSなど）、デザイン要素を参考に判定。
-- タイトルと候補タイトルの末尾に必ず対象を明記する（例：「メンズ」、「レディース」、「キッズ」）。
+- 生成されるすべての候補タイトルのトルの末尾に必ず対象を明記する（例：「メンズ」、「レディース」、「キッズ」）。
 例:
 「ルイ・ヴィトン Louis Vuitton モノグラム トートバッグ レディース」
 「ナイキナイキスウェットパーカーメンズ」
@@ -219,8 +136,97 @@ Bランク → 以下のいずれかに該当する場合。
 ---
 
 ### 4. カテゴリ (category)
-常に '123' を返してください。
+以下のJSONは全てのカテゴリ構造（最上位～最下位）を表します。
+提供された商品情報（タイトル、説明、ブランド、画像など）に基づき、
+該当商品に最も適したカテゴリパスを1つ選択し、配列形式で出力してください。
 
+【カテゴリー構造データ】
+{
+  "アンティーク、コレクション": {
+    "雑貨": ["キーホルダー", "喫煙グッズ"]
+  },
+  "事務、店舗用品": {
+    "文房具": ["筆記用具"]
+  },
+  "スポーツ、レジャー": {
+    "キャンプ、アウトドア用品": ["かばん、バッグ"],
+    "スポーツ別": ["ゴルフ"],
+    "スポーツウエア": ["男性用", "女性用", "男女兼用", "子ども用"],
+    "アウトドアウエア": ["ブランド別", "男性用", "女性用", "子ども用", "服飾小物"],
+    "スポーツサングラス": [
+      "OGK", "zerorh+", "アーネット", "アックス", "アディダス",
+      "オークリー", "コールマン", "スパイ", "スポルディング", "スワンズ",
+      "ナイキ", "ブラックフライ", "ブリコ", "ルディプロジェクト", "レイバン",
+      "その他"
+    ]
+  },
+  "ファッション": {
+    "ブランド別": [
+      "あ","い","う","え","お","か","き","く","け","こ","さ","し","す","せ/そ","た/ち/つ",
+      "て","と","な～の","は","ひ","ふ","へ","ほ","ま","み","む/め/も","や/ゆ/よ","ら","り","る","れ","ろ","わ"
+    ],
+    "レディースファッション": [
+      "コート","ジャケット、上着","カーディガン","アンサンブルニット","ニット、セーター",
+      "ベスト","トレーナー","カットソー","シャツ、ブラウス","チュニック","Tシャツ",
+      "ポロシャツ","キャミソール","タンクトップ","チューブトップ、ベアトップ",
+      "ワンピース","スカート","パンツ、スラックス","デニム、ジーンズ","ワークパンツ、ペインターパンツ",
+      "ショートパンツ","サブリナパンツ、カプリパンツ","サロペット、オーバーオール",
+      "キュロット","チノパン","サルエルパンツ","スーツ","フォーマル","レギンス、トレンカ",
+      "インナーウエア","ナイトウエア、パジャマ","水着","マタニティウエア","その他"
+    ],
+    "レディースバッグ": [
+      "ショルダーバッグ","トートバッグ","ハンドバッグ","ポーチ","ウエストバッグ",
+      "クラッチバッグ、パーティバッグ","セカンドバッグ","バスケット、籐かご","バニティバッグ",
+      "ブリーフケース、書類かばん","ボストンバッグ","ボディバッグ","ポシェット","リュックサック、デイパック","巾着"
+    ],
+    "レディースシューズ": ["ウォーキングシューズ","サンダル","スニーカー","バレエシューズ","パンプス","ブーツ","ミュール","ローファー、モカシン","長靴、レインシューズ","その他"],
+    "女性和服、着物": ["かんざし","きんちゃく、バッグ","コート、道中着","下駄、草履","小紋","色無地","振袖","帯","紬、お召","付下げ","訪問着","浴衣","留袖","長襦袢","和装小物","アンティーク","その他"],
+    "ファッション小物": ["財布","定期入れ","キーケース","うちわ","扇子","ふくさ","風呂敷","雨傘","日傘","帽子","サングラス","エプロン","サスペンダー","ティッシュカバー","ネクタイ","ハンカチ","バンダナ","ベルト"],
+    "メンズファッション": [
+      "コート","ジャケット、上着","カーディガン","ニット、セーター","ベスト","トレーナー","シャツ","ポロシャツ","Tシャツ",
+      "タンクトップ","ジーンズ","パンツ、スラックス","ワークパンツ、ペインターパンツ","チノパン","ショートパンツ",
+      "オーバーオール","サルエルパンツ","スーツ","インナーウエア","パジャマ","フォーマル","水着","その他"
+    ],
+    "メンズバッグ": ["ショルダーバッグ","ブリーフケース、書類かばん","リュックサック、デイパック","ウエストバッグ","トートバッグ","セカンドバッグ","ハンドバッグ","ボストンバッグ","ボディバッグ"],
+    "メンズシューズ": ["スニーカー","サンダル","ブーツ","ローファー、スリッポン","ビジネスシューズ","デッキシューズ","ウォーキングシューズ","長靴、レインシューズ","その他"],
+    "男性和服、着物": ["一般","下駄、草履","作務衣","甚平","帯","浴衣","長襦袢","和装小物"],
+    "男女兼用バッグ": ["ウエストバッグ","エコバッグ","ショルダーバッグ","トートバッグ","ボストンバッグ","メディスンバッグ","リュックサック、デイパック"],
+    "キッズ、ベビーファッション": ["ブランド別","子ども服（女の子用）","子ども服（男女兼用）","子ども用シューズ","ベビー服","ベビーシューズ","ベビー用ファッション小物"],
+    "ハンドメイド": ["ベビー用","子ども用","女性用","男性用","服飾小物","かばん、バッグ"]
+  },
+  "アクセサリー、時計": {
+    "メンズ腕時計": ["アナログ（クォーツ式）","アナログ（自動巻き）","アナログ（手巻き）","デジタル"],
+    "レディース腕時計": ["アナログ（クォーツ式）","アナログ（自動巻き）","アナログ（手巻き）","デジタル"],
+    "キャラクター腕時計": ["その他"],
+    "ブランドアクセサリー": [
+      "A＆G","アーカー","アガタ","アガット","アバクロンビー＆フィッチ","Q-pot","カルティエ","カレラ イ カレラ","ガボール","クリスチャン・ディオール","エルメス","クレージュ","クレイジーピッグ","クロムハーツ","グッチ","コーチ","コム サ デ モード","ゴローズ","シャネル","ショーメ","ショパール","ジバンシイ","ジャスティンデイビス","ジャムホームメイド","ジョージ・ジェンセン","スタージュエリー","スワロフスキー","タテオシアン","ダミーニ","ダンヒル","ティファニー","デビアス","トラヴィスワーカー","ドルチェ＆ガッバーナ","田崎真珠","ナンバーナイン","ニナリッチ","ノジェス","ハリー・ウィンストン","バカラ","ビルウォールレザー","ピアジェ","フォリフォリ","フリースタイル","ブシュロン","ブラッディーマリー","ブルーム","ブルガリ","ポール･スミス","ポメラート","ポンテヴェキオ","ヴァンクリーフ＆アーペル","ヴァンドーム青山","ヴィヴィアンウエストウッド","ミキモト","ミハエル・ネグリン","ミリアム・ハスケル","4℃","ルイ・ヴィトン","レナードカムホート、ロンワンズ","ロードキャメロット","ローリーロドキン","ロイヤルオーダー"
+    ],
+    "レディースアクセサリー": ["ネックレス、ペンダント","ペンダントトップ、チャーム","ネックレス（チェーンのみ）","チョーカー","指輪","ピアス","イヤリング","ブレスレット、バングル","アンクレット","裸石、ルース","ブローチ","ヘアアクセサリー","コサージュ","ボディピアス","アクセサリーケース"],
+    "メンズアクセサリー": ["ネックレス","ペンダント","ペンダントトップ、チャーム","ブレスレット、バングル","指輪","キーチェーン、ウォレットチェーン","タイピン","ピアス","ボディピアス","バックル","マネークリップ","ウイッグ","チョーカー","その他"],
+    "ブランド腕時計": ["あ行","か行","さ行","た行","な行","は行","ま行、や行","ら行"]
+  },
+  "ビューティー、ヘルスケア": {
+    "めがね、コンタクト": ["めがね","めがねケース","老眼鏡"]
+  },
+  "携帯電話、スマートフォン": {
+    "アクセサリー": ["iPhone用ケース"]
+  }
+}
+
+【出力形式】
+必ず以下の形式で出力してください：
+[“大カテゴリー”, “中カテゴリー”, ‘小カテゴリー’, “下位カテゴリー”]
+
+【ルール】
+1. JSONに存在しないカテゴリを新規作成しない。
+2. 商品名・説明・画像等から判断し、最も近いカテゴリパスを選択する。
+3. ブランド名やアイテム名が複数のカテゴリに該当する場合、
+   - 優先順位は「商品種類」＞「ブランド」＞「素材」＞「色」。
+4. 出力は配列（JSON形式）1行のみ。不要な説明文は不要。
+5. 確信がなくても最も近いカテゴリーを必ず返す。
+6. 結果が曖昧な場合、「その他」を含むカテゴリーを選択する。
+
+例: [“携帯電話、スマートフォン”, ‘アクセサリー’, “iPhone用ケース”]
 ---
 
 ### 5. 採寸 (measurement)
@@ -259,6 +265,7 @@ Bランク → 以下のいずれかに該当する場合。
         "japanese": ""
     },
     "category": "123",
+    "categoryList": ["事務、店舗用品","文房具","筆記用具"],
     "condition": "1",
     "shop1": "123",
     "shop2": "123",
@@ -304,6 +311,11 @@ Bランク → 以下のいずれかに該当する場合。
                 throw new Error('Invalid response format from OpenAI');
             }
 
+            // Ensure categoryList exists, default to empty array if not provided
+            if (!analysis.categoryList || !Array.isArray(analysis.categoryList)) {
+                analysis.categoryList = [];
+            }
+
             return analysis;
 
         } catch (error) {
@@ -313,6 +325,7 @@ Bランク → 以下のいずれかに該当する場合。
             return {
                 title: [''],
                 category: '',
+                categoryList: [],
                 level: 'B',
                 measurement: '',
                 condition: '',

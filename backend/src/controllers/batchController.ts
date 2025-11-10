@@ -304,6 +304,7 @@ class BatchController {
                 measurementType: analysis.measurement_type ? JSON.stringify(analysis.measurement_type) : null, // Convert object to JSON string
                 condition: analysis.condition,
                 category: analysis.category,
+                categoryList: analysis.categoryList || [], // Store category list from OpenAI
                 shop1: analysis.shop1,
                 shop2: analysis.shop2,
                 shop3: analysis.shop3,
