@@ -66,3 +66,18 @@ model WorkProcess {
   
   @@map("work_processes")
 }
+
+model Category {
+  id            Int            @id @default(autoincrement())
+  code          String         @unique
+  category      String         
+  category2     String?         
+  category3     String?         
+  category4     String?         
+  category5     String?         
+  category6     String?         
+  category7     String?         
+  category8     String?         
+  
+  @@map("categories")
+}
