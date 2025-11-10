@@ -3,6 +3,7 @@ import { productService, ProductImages } from '../services/ProductService';
 import { openAIService, OpenAIProductAnalysis } from '../services/OpenAIService';
 import { workProcessService } from '../services/WorkProcessService';
 import { userService } from '../services/UserService';
+import { categoryService } from '../services/CategoryService';
 
 
 
@@ -709,6 +710,69 @@ class BatchController {
             res.status(500).json({
                 success: false,
                 message: 'Failed to get active work processes',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Get top-level categories
+     */
+    getTopLevelCategories = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const categories = await categoryService.getTopLevelCategories();
+
+            res.status(200).json({
+                success: true,
+                data: categories
+            });
+        } catch (error) {
+            console.error('Error getting top-level categories:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get top-level categories',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Get categories by level
+     */
+    getCategoriesByLevel = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { level } = req.params;
+            const { category, category2, category3, category4, category5, category6, category7 } = req.query;
+
+            const levelNum = parseInt(level);
+            if (isNaN(levelNum) || levelNum < 2 || levelNum > 8) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Invalid level. Must be between 2 and 8'
+                });
+                return;
+            }
+
+            const categories = await categoryService.getCategoriesByLevel(
+                levelNum,
+                category as string,
+                category2 as string,
+                category3 as string,
+                category4 as string,
+                category5 as string,
+                category6 as string,
+                category7 as string
+            );
+
+            res.status(200).json({
+                success: true,
+                data: categories
+            });
+        } catch (error) {
+            console.error('Error getting categories by level:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get categories',
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
         }

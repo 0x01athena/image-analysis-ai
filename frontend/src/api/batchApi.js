@@ -216,6 +216,43 @@ export const getActiveWorkProcesses = async (userId) => {
     return response.json();
 };
 
+/**
+ * Get top-level categories
+ * @returns {Promise<Object>} Top-level categories
+ */
+export const getTopLevelCategories = async () => {
+    const response = await fetch(`${API_BASE_URL}/batch/categories/top-level`);
+
+    if (!response.ok) {
+        throw new Error(`Failed to get top-level categories: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
+/**
+ * Get categories by level
+ * @param {number} level - Category level (2-8)
+ * @param {Object} parentCategories - Parent category selections
+ * @returns {Promise<Object>} Categories for the level
+ */
+export const getCategoriesByLevel = async (level, parentCategories = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(parentCategories).forEach(([key, value]) => {
+        if (value) {
+            params.append(key, value);
+        }
+    });
+
+    const response = await fetch(`${API_BASE_URL}/batch/categories/level/${level}?${params.toString()}`);
+
+    if (!response.ok) {
+        throw new Error(`Failed to get categories: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
 export const deleteMultipleProducts = async (managementNumbers) => {
     const response = await fetch(`${API_BASE_URL}/batch/products`, {
         method: 'DELETE',

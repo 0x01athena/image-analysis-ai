@@ -201,6 +201,78 @@ router.put('/work-process/:workProcessId/finish', batchController.markWorkProces
  */
 router.get('/users/:userId/work-processes', batchController.getActiveWorkProcesses);
 
+/**
+ * @swagger
+ * /api/batch/categories/top-level:
+ *   get:
+ *     summary: Get top-level categories
+ *     tags: [Categories]
+ *     responses:
+ *       200:
+ *         description: Top-level categories retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/categories/top-level', batchController.getTopLevelCategories);
+
+/**
+ * @swagger
+ * /api/batch/categories/level/{level}:
+ *   get:
+ *     summary: Get categories by level
+ *     tags: [Categories]
+ *     parameters:
+ *       - in: path
+ *         name: level
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Category level (2-8)
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Parent category
+ *       - in: query
+ *         name: category2
+ *         schema:
+ *           type: string
+ *         description: Parent category2
+ *       - in: query
+ *         name: category3
+ *         schema:
+ *           type: string
+ *         description: Parent category3
+ *       - in: query
+ *         name: category4
+ *         schema:
+ *           type: string
+ *         description: Parent category4
+ *       - in: query
+ *         name: category5
+ *         schema:
+ *           type: string
+ *         description: Parent category5
+ *       - in: query
+ *         name: category6
+ *         schema:
+ *           type: string
+ *         description: Parent category6
+ *       - in: query
+ *         name: category7
+ *         schema:
+ *           type: string
+ *         description: Parent category7
+ *     responses:
+ *       200:
+ *         description: Categories retrieved successfully
+ *       400:
+ *         description: Invalid level
+ *       500:
+ *         description: Server error
+ */
+router.get('/categories/level/:level', batchController.getCategoriesByLevel);
+
 
 /**
  * @swagger

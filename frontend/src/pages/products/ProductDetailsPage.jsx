@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Save, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, X, ChevronLeft, ChevronRight, FolderTree } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProduct, updateProduct, deleteProduct, getAllProducts, selectTitle } from '../../api/batchApi';
+import CategorySelectionModal from '../../components/CategorySelectionModal';
 
 const ProductDetailsPage = () => {
     const { managementNumber } = useParams();
@@ -18,6 +19,7 @@ const ProductDetailsPage = () => {
     const [candidateTitles, setCandidateTitles] = useState([]);
     const [showTitleSelector, setShowTitleSelector] = useState(false);
     const [showImageModal, setShowImageModal] = useState(false);
+    const [showCategoryModal, setShowCategoryModal] = useState(false);
 
     const loadProduct = async () => {
         try {
@@ -483,13 +485,24 @@ const ProductDetailsPage = () => {
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     カテゴリ
                                 </label>
-                                <input
-                                    type="text"
-                                    value={formData.category}
-                                    onChange={(e) => handleInputChange('category', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    placeholder="カテゴリ"
-                                />
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        value={formData.category}
+                                        onChange={(e) => handleInputChange('category', e.target.value)}
+                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        placeholder="カテゴリコード"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCategoryModal(true)}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center gap-2"
+                                        title="カテゴリを選択"
+                                    >
+                                        <FolderTree className="w-4 h-4" />
+                                        選択
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Marketplace IDs */}
@@ -661,6 +674,17 @@ const ProductDetailsPage = () => {
                         </motion.div>
                     </div>
                 )}
+
+                {/* Category Selection Modal */}
+                <CategorySelectionModal
+                    isOpen={showCategoryModal}
+                    onClose={() => setShowCategoryModal(false)}
+                    onSelect={(categoryCode) => {
+                        handleInputChange('category', categoryCode);
+                        setShowCategoryModal(false);
+                    }}
+                    currentCategory={formData.category}
+                />
             </div>
         </div>
     );
