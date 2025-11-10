@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
-import { productService, ProductImages } from '../services/ProductService';
+import { productService, ProductImages } from '../services/productService';
 import { openAIService, OpenAIProductAnalysis } from '../services/OpenAIService';
 import { workProcessService } from '../services/WorkProcessService';
 import { userService } from '../services/UserService';
+import { categoryService } from '../services/CategoryService';
 
 
 
@@ -303,6 +304,7 @@ class BatchController {
                 measurementType: analysis.measurement_type ? JSON.stringify(analysis.measurement_type) : null, // Convert object to JSON string
                 condition: analysis.condition,
                 category: analysis.category,
+                categoryList: analysis.categoryList || [], // Store category list from OpenAI
                 shop1: analysis.shop1,
                 shop2: analysis.shop2,
                 shop3: analysis.shop3,
@@ -709,6 +711,103 @@ class BatchController {
             res.status(500).json({
                 success: false,
                 message: 'Failed to get active work processes',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Get category list for a product
+     */
+    getProductCategoryList = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { productId } = req.params;
+
+            if (!productId) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Product ID is required'
+                });
+                return;
+            }
+
+            const categoryList = await productService.getCategoryList(productId);
+
+            res.status(200).json({
+                success: true,
+                data: categoryList
+            });
+        } catch (error) {
+            console.error('Error getting product category list:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get product category list',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Get top-level categories
+     */
+    getTopLevelCategories = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const categories = await categoryService.getTopLevelCategories();
+
+            res.status(200).json({
+                success: true,
+                data: categories
+            });
+        } catch (error) {
+            console.error('Error getting top-level categories:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get top-level categories',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Get categories by level
+     */
+    getCategoriesByLevel = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { level } = req.params;
+            const { category, category2, category3, category4, category5, category6, category7 } = req.body;
+
+            const levelNum = parseInt(level);
+            if (isNaN(levelNum) || levelNum < 2 || levelNum > 8) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Invalid level. Must be between 2 and 8'
+                });
+                return;
+            }
+            console.log('req.body', req.body, level);
+
+            await productService.updateProductCategoryList(levelNum - 1, req.body);
+
+            const categories = await categoryService.getCategoriesByLevel(
+                levelNum,
+                category as string,
+                category2 as string,
+                category3 as string,
+                category4 as string,
+                category5 as string,
+                category6 as string,
+                category7 as string
+            );
+
+            res.status(200).json({
+                success: true,
+                data: categories
+            });
+        } catch (error) {
+            console.error('Error getting categories by level:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get categories',
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
         }

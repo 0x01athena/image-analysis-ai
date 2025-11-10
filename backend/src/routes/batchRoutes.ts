@@ -201,6 +201,97 @@ router.put('/work-process/:workProcessId/finish', batchController.markWorkProces
  */
 router.get('/users/:userId/work-processes', batchController.getActiveWorkProcesses);
 
+/**
+ * @swagger
+ * /api/batch/products/{productId}/category-list:
+ *   get:
+ *     summary: Get category list for a product
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product ID (management number)
+ *     responses:
+ *       200:
+ *         description: Category list retrieved successfully
+ *       400:
+ *         description: Product ID is required
+ *       500:
+ *         description: Server error
+ */
+router.get('/products/:productId/category-list', batchController.getProductCategoryList);
+
+/**
+ * @swagger
+ * /api/batch/categories/top-level:
+ *   get:
+ *     summary: Get top-level categories
+ *     tags: [Categories]
+ *     responses:
+ *       200:
+ *         description: Top-level categories retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/categories/top-level', batchController.getTopLevelCategories);
+
+/**
+ * @swagger
+ * /api/batch/categories/level/{level}:
+ *   post:
+ *     summary: Get categories by level
+ *     tags: [Categories]
+ *     parameters:
+ *       - in: path
+ *         name: level
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Category level (2-8)
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               category:
+ *                 type: string
+ *                 description: Parent category
+ *               category2:
+ *                 type: string
+ *                 description: Parent category2
+ *               category3:
+ *                 type: string
+ *                 description: Parent category3
+ *               category4:
+ *                 type: string
+ *                 description: Parent category4
+ *               category5:
+ *                 type: string
+ *                 description: Parent category5
+ *               category6:
+ *                 type: string
+ *                 description: Parent category6
+ *               category7:
+ *                 type: string
+ *                 description: Parent category7
+ *               productId:
+ *                 type: string
+ *                 description: Product ID (management number)
+ *     responses:
+ *       200:
+ *         description: Categories retrieved successfully
+ *       400:
+ *         description: Invalid level
+ *       500:
+ *         description: Server error
+ */
+router.post('/categories/level/:level', batchController.getCategoriesByLevel);
+
 
 /**
  * @swagger

@@ -23,10 +23,11 @@ model Product {
   measurement      String?
   condition        String?
   category         String?
+  categoryList     String?  @default("[]")
   shop1            String?
   shop2            String?
   shop3            String?
-  price            Float?   // Price for the product
+  price            Float? 
   images           String   @default("[]") // JSON string for SQLite compatibility
   userId           String?  // User who processed this product
   createdAt        DateTime @default(now())
@@ -65,4 +66,19 @@ model WorkProcess {
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@map("work_processes")
+}
+
+model Category {
+  id            Int            @id @default(autoincrement())
+  code          String         @unique
+  category      String         
+  category2     String?         
+  category3     String?         
+  category4     String?         
+  category5     String?         
+  category6     String?         
+  category7     String?         
+  category8     String?         
+  
+  @@map("categories")
 }

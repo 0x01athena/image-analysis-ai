@@ -460,10 +460,22 @@ const BatchProcessingPage = () => {
                     {/* AI Analysis Progress Status */}
                     {isProcessing && (
                         <div className="mb-8">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <Activity className="w-5 h-5 text-purple-600" />
-                                AI分析進行状況
-                            </h2>
+                            <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                                        <Activity className="w-5 h-5 text-purple-600" />
+                                        AI分析進行状況
+                                    </h2>
+                                {currentSession?.workProcessId && (
+                                    <button
+                                        onClick={handleClearWorkProcess}
+                                        className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-300 flex items-center gap-2"
+                                        title="現在の作業プロセスをクリア"
+                                    >
+                                        <XCircle className="w-4 h-4" />
+                                        現在の作業プロセスをクリア
+                                    </button>
+                                )}
+                            </div>
                             <div className="bg-gray-50 rounded-lg p-6">
                                 {taskProgress.totalProducts > 0 ? (
                                     <>
@@ -531,17 +543,7 @@ const BatchProcessingPage = () => {
                             <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                                 <User className="w-5 h-5 text-blue-600" />
                                 作業者選択
-                            </h2>
-                            {currentSession?.workProcessId && (
-                                <button
-                                    onClick={handleClearWorkProcess}
-                                    className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-300 flex items-center gap-2"
-                                    title="現在の作業プロセスをクリア"
-                                >
-                                    <XCircle className="w-4 h-4" />
-                                    現在の作業プロセスをクリア
-                                </button>
-                            )}
+                            </h2>                            
                         </div>
                         <div>
                             {usersLoading ? (
@@ -592,12 +594,6 @@ const BatchProcessingPage = () => {
                                             <span className="text-sm text-gray-600">円</span>
                                         </div>
                                     </div>
-                                    {selectedUser && (
-                                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                                            <User className="w-5 h-5" />
-                                            選択中: <span className="font-medium">{selectedUser.username}</span>
-                                        </div>
-                                    )}
                                 </div>
                             )}
                         </div>

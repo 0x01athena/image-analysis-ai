@@ -18,6 +18,7 @@ export interface ProductData {
     measurementType?: string | null;
     condition?: string | null;
     category?: string | null;
+    categoryList?: string[] | null;
     shop1?: string | null;
     shop2?: string | null;
     shop3?: string | null;
@@ -194,6 +195,7 @@ export class ProductService {
             if (data.measurementType !== undefined) updateData.measurementType = data.measurementType;
             if (data.condition !== undefined) updateData.condition = data.condition;
             if (data.category !== undefined) updateData.category = data.category;
+            if (data.categoryList !== undefined) updateData.categoryList = JSON.stringify(data.categoryList);
             if (data.shop1 !== undefined) updateData.shop1 = data.shop1;
             if (data.shop2 !== undefined) updateData.shop2 = data.shop2;
             if (data.shop3 !== undefined) updateData.shop3 = data.shop3;
@@ -448,6 +450,70 @@ export class ProductService {
     private arraysEqual(a: string[], b: string[]): boolean {
         if (a.length !== b.length) return false;
         return a.every((val, index) => val === b[index]);
+    }
+
+    async getCategoryList(productId: string): Promise<string[] | null> {
+        try {
+            const product = await prisma.product.findUnique({
+                where: { managementNumber: productId },
+                select: { categoryList: true }
+            });
+
+            if (!product?.categoryList) {
+                return null;
+            }
+
+            try {
+                const categoryList = typeof product.categoryList === 'string'
+                    ? JSON.parse(product.categoryList)
+                    : product.categoryList;
+                return Array.isArray(categoryList) ? categoryList : null;
+            } catch (e) {
+                return null;
+            }
+        } catch (error) {
+            console.error('Error getting category list:', error);
+            return null;
+        }
+    }
+
+    async updateProductCategoryList(level: number, body: any): Promise<void> {
+        try {
+            const { productId } = body;
+
+            if (!productId) {
+                throw new Error('Product ID is required');
+            }
+
+            const product = await prisma.product.findUnique({
+                where: { managementNumber: productId },
+                select: { categoryList: true }
+            });
+
+            console.log('product', product?.categoryList, level);
+
+            let categoryList = await JSON.parse(product?.categoryList as string);
+            categoryList = await level === 1 ? [] : categoryList.slice(0, level);
+
+            console.log('categoryList', categoryList);
+
+            const currentCategory = body?.[level === 1 ? `category` : `category${level}`]
+
+            if (!categoryList.includes(currentCategory)) {
+                categoryList.push(currentCategory);
+
+                // Update the product
+                await prisma.product.update({
+                    where: { managementNumber: productId },
+                    data: {
+                        categoryList: JSON.stringify(categoryList)
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error updating product category list:', error);
+            throw error;
+        }
     }
 }
 
