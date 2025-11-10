@@ -3,8 +3,8 @@ import { API_BASE_URL } from './config.js';
 /**
  * Upload images from directory
  * @param {FileList} files - Array of image files
- * @param {string} userId - User ID
  * @returns {Promise<Object>} Upload result
+ * @param {string} userId - User ID
  */
 export const uploadDirectoryImages = async (files, userId) => {
     const formData = new FormData();
