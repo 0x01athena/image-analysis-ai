@@ -95,10 +95,14 @@ export class CategoryService {
                 selectFields[`category${i}`] = true;
             }
 
+            console.log('whereClause', whereClause);
+
             const categories = await prisma.category.findMany({
                 where: whereClause,
                 select: selectFields
             });
+
+            console.log('categories', categories);
 
             // Get unique category names for this level
             const uniqueCategories = new Map<string, { code?: string; hasChildren: boolean }>();

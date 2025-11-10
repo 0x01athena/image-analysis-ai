@@ -217,6 +217,21 @@ export const getActiveWorkProcesses = async (userId) => {
 };
 
 /**
+ * Get category list for a product
+ * @param {string} productId - Product ID (management number)
+ * @returns {Promise<Object>} Category list
+ */
+export const getProductCategoryList = async (productId) => {
+    const response = await fetch(`${API_BASE_URL}/batch/products/${productId}/category-list`);
+
+    if (!response.ok) {
+        throw new Error(`Failed to get product category list: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
+/**
  * Get top-level categories
  * @returns {Promise<Object>} Top-level categories
  */
@@ -234,17 +249,22 @@ export const getTopLevelCategories = async () => {
  * Get categories by level
  * @param {number} level - Category level (2-8)
  * @param {Object} parentCategories - Parent category selections
+ * @param {string} productId - Product ID (management number)
  * @returns {Promise<Object>} Categories for the level
  */
-export const getCategoriesByLevel = async (level, parentCategories = {}) => {
-    const params = new URLSearchParams();
-    Object.entries(parentCategories).forEach(([key, value]) => {
-        if (value) {
-            params.append(key, value);
-        }
-    });
+export const getCategoriesByLevel = async (level, parentCategories = {}, productId) => {
+    const requestBody = {
+        ...parentCategories,
+        ...(productId && { productId })
+    };
 
-    const response = await fetch(`${API_BASE_URL}/batch/categories/level/${level}?${params.toString()}`);
+    const response = await fetch(`${API_BASE_URL}/batch/categories/level/${level}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+    });
 
     if (!response.ok) {
         throw new Error(`Failed to get categories: ${response.statusText}`);

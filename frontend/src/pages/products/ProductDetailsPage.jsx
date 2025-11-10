@@ -684,6 +684,7 @@ const ProductDetailsPage = () => {
                         setShowCategoryModal(false);
                     }}
                     currentCategory={formData.category}
+                    productId={managementNumber}
                 />
             </div>
         </div>

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { productService, ProductImages } from '../services/ProductService';
+import { productService, ProductImages } from '../services/productService';
 import { openAIService, OpenAIProductAnalysis } from '../services/OpenAIService';
 import { workProcessService } from '../services/WorkProcessService';
 import { userService } from '../services/UserService';
@@ -716,6 +716,37 @@ class BatchController {
     };
 
     /**
+     * Get category list for a product
+     */
+    getProductCategoryList = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { productId } = req.params;
+
+            if (!productId) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Product ID is required'
+                });
+                return;
+            }
+
+            const categoryList = await productService.getCategoryList(productId);
+
+            res.status(200).json({
+                success: true,
+                data: categoryList
+            });
+        } catch (error) {
+            console.error('Error getting product category list:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get product category list',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
      * Get top-level categories
      */
     getTopLevelCategories = async (req: Request, res: Response): Promise<void> => {
@@ -742,7 +773,7 @@ class BatchController {
     getCategoriesByLevel = async (req: Request, res: Response): Promise<void> => {
         try {
             const { level } = req.params;
-            const { category, category2, category3, category4, category5, category6, category7 } = req.query;
+            const { category, category2, category3, category4, category5, category6, category7 } = req.body;
 
             const levelNum = parseInt(level);
             if (isNaN(levelNum) || levelNum < 2 || levelNum > 8) {
@@ -752,6 +783,9 @@ class BatchController {
                 });
                 return;
             }
+            console.log('req.body', req.body, level);
+
+            await productService.updateProductCategoryList(levelNum - 1, req.body);
 
             const categories = await categoryService.getCategoriesByLevel(
                 levelNum,

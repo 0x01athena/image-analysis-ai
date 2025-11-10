@@ -1,21 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, ChevronRight, ChevronLeft } from 'lucide-react';
-import { getTopLevelCategories, getCategoriesByLevel } from '../api/batchApi';
+import { getTopLevelCategories, getCategoriesByLevel, getProductCategoryList } from '../api/batchApi';
 
-const CategorySelectionModal = ({ isOpen, onClose, onSelect, currentCategory }) => {
+const CategorySelectionModal = ({ isOpen, onClose, onSelect, currentCategory, productId }) => {
     const [step, setStep] = useState(1); // Step 1 = top level (7 buttons), Step 2+ = category2-8
     const [selectedPath, setSelectedPath] = useState({});
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Load top-level categories when modal opens or when step returns to 1
+    // Load stored category list and initialize modal state when it opens
     useEffect(() => {
-        if (isOpen && step === 1) {
+        if (isOpen && productId) {
+            loadStoredCategoryList();
+        } else if (isOpen && step === 1) {
             loadTopLevelCategories();
         }
-    }, [isOpen, step]);
+    }, [isOpen]);
+
+    // Load top-level categories when step returns to 1 (but not on initial open)
+    useEffect(() => {
+        if (isOpen && step === 1 && Object.keys(selectedPath).length === 0) {
+            loadTopLevelCategories();
+        }
+    }, [step]);
 
     // Load categories for current step when step or selections change
     useEffect(() => {
@@ -23,6 +32,98 @@ const CategorySelectionModal = ({ isOpen, onClose, onSelect, currentCategory }) 
             loadCategoriesForStep();
         }
     }, [isOpen, step, selectedPath]);
+
+    const loadStoredCategoryList = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const response = await getProductCategoryList(productId);
+            if (response.success && response.data && Array.isArray(response.data) && response.data.length > 0) {
+                // categoryList is an array of category name strings
+                // Each index corresponds to a step: [category, category2, category3, ...]
+                // The current step is the next step after the last stored category
+                const categoryList = response.data;
+                const path = {};
+
+                // Build the path from the stored categories
+                if (categoryList[0]) {
+                    path.category = categoryList[0];
+                }
+                if (categoryList[1]) {
+                    path.category2 = categoryList[1];
+                }
+                if (categoryList[2]) {
+                    path.category3 = categoryList[2];
+                }
+                if (categoryList[3]) {
+                    path.category4 = categoryList[3];
+                }
+                if (categoryList[4]) {
+                    path.category5 = categoryList[4];
+                }
+                if (categoryList[5]) {
+                    path.category6 = categoryList[5];
+                }
+                if (categoryList[6]) {
+                    path.category7 = categoryList[6];
+                }
+
+                // The current step is the next step after the last stored category
+                // If we have 3 categories stored, we're at step 4 (ready to select category4)
+                const currentStep = categoryList.length + 1;
+
+                // Set the path and step
+                setSelectedPath(path);
+                setStep(currentStep);
+
+                // Load categories for the current step
+                if (currentStep === 1) {
+                    await loadTopLevelCategories();
+                } else {
+                    await loadCategoriesForStepWithPath(path, currentStep);
+                }
+            } else {
+                // No stored category list, start from step 1
+                setStep(1);
+                await loadTopLevelCategories();
+            }
+        } catch (err) {
+            console.error('Error loading stored category list:', err);
+            // If error, just start from step 1
+            setStep(1);
+            await loadTopLevelCategories();
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const loadCategoriesForStepWithPath = async (path, stepNum) => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            // Build parent categories object
+            const parentCategories = {};
+            if (path.category) parentCategories.category = path.category;
+            if (path.category2) parentCategories.category2 = path.category2;
+            if (path.category3) parentCategories.category3 = path.category3;
+            if (path.category4) parentCategories.category4 = path.category4;
+            if (path.category5) parentCategories.category5 = path.category5;
+            if (path.category6) parentCategories.category6 = path.category6;
+            if (path.category7) parentCategories.category7 = path.category7;
+
+            const response = await getCategoriesByLevel(stepNum, parentCategories, productId);
+            if (response.success) {
+                setCategories(response.data);
+            }
+        } catch (err) {
+            console.error('Error loading categories:', err);
+            setError('カテゴリの読み込みに失敗しました');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const loadTopLevelCategories = async () => {
         try {
@@ -56,7 +157,7 @@ const CategorySelectionModal = ({ isOpen, onClose, onSelect, currentCategory }) 
             if (selectedPath.category6) parentCategories.category6 = selectedPath.category6;
             if (selectedPath.category7) parentCategories.category7 = selectedPath.category7;
 
-            const response = await getCategoriesByLevel(step, parentCategories);
+            const response = await getCategoriesByLevel(step, parentCategories, productId);
             if (response.success) {
                 setCategories(response.data);
             }

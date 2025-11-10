@@ -203,6 +203,29 @@ router.get('/users/:userId/work-processes', batchController.getActiveWorkProcess
 
 /**
  * @swagger
+ * /api/batch/products/{productId}/category-list:
+ *   get:
+ *     summary: Get category list for a product
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product ID (management number)
+ *     responses:
+ *       200:
+ *         description: Category list retrieved successfully
+ *       400:
+ *         description: Product ID is required
+ *       500:
+ *         description: Server error
+ */
+router.get('/products/:productId/category-list', batchController.getProductCategoryList);
+
+/**
+ * @swagger
  * /api/batch/categories/top-level:
  *   get:
  *     summary: Get top-level categories
@@ -218,7 +241,7 @@ router.get('/categories/top-level', batchController.getTopLevelCategories);
 /**
  * @swagger
  * /api/batch/categories/level/{level}:
- *   get:
+ *   post:
  *     summary: Get categories by level
  *     tags: [Categories]
  *     parameters:
@@ -228,41 +251,37 @@ router.get('/categories/top-level', batchController.getTopLevelCategories);
  *         schema:
  *           type: integer
  *         description: Category level (2-8)
- *       - in: query
- *         name: category
- *         schema:
- *           type: string
- *         description: Parent category
- *       - in: query
- *         name: category2
- *         schema:
- *           type: string
- *         description: Parent category2
- *       - in: query
- *         name: category3
- *         schema:
- *           type: string
- *         description: Parent category3
- *       - in: query
- *         name: category4
- *         schema:
- *           type: string
- *         description: Parent category4
- *       - in: query
- *         name: category5
- *         schema:
- *           type: string
- *         description: Parent category5
- *       - in: query
- *         name: category6
- *         schema:
- *           type: string
- *         description: Parent category6
- *       - in: query
- *         name: category7
- *         schema:
- *           type: string
- *         description: Parent category7
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               category:
+ *                 type: string
+ *                 description: Parent category
+ *               category2:
+ *                 type: string
+ *                 description: Parent category2
+ *               category3:
+ *                 type: string
+ *                 description: Parent category3
+ *               category4:
+ *                 type: string
+ *                 description: Parent category4
+ *               category5:
+ *                 type: string
+ *                 description: Parent category5
+ *               category6:
+ *                 type: string
+ *                 description: Parent category6
+ *               category7:
+ *                 type: string
+ *                 description: Parent category7
+ *               productId:
+ *                 type: string
+ *                 description: Product ID (management number)
  *     responses:
  *       200:
  *         description: Categories retrieved successfully
@@ -271,7 +290,7 @@ router.get('/categories/top-level', batchController.getTopLevelCategories);
  *       500:
  *         description: Server error
  */
-router.get('/categories/level/:level', batchController.getCategoriesByLevel);
+router.post('/categories/level/:level', batchController.getCategoriesByLevel);
 
 
 /**
