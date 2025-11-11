@@ -233,7 +233,7 @@ Bランク → 以下のいずれかに該当する場合。
 例: [“携帯電話、スマートフォン”, ‘アクセサリー’, “iPhone用ケース”]
 ---
 
-### 5. 採寸 (measurement)
+### 6. 採寸 (measurement)
 画像の背景に方眼（マス目）模様がある場合、それを採寸の基準として使用する。
 各マス目は1cm×1cmの正方形として扱う。
 服やアイテムの端から端までのマス目数を数え、おおよその長さをcm単位で推定する。
@@ -246,13 +246,13 @@ Bランク → 以下のいずれかに該当する場合。
 
 ---
 
-### 6. コンディション (condition)
-常に '1' を返してください。
+### 7. コンディション (condition)
+常に '' を返してください。
 
 ---
 
-### 7〜9. 店舗ID (shop1, shop2, shop3)
-それぞれ '123' を返してください。
+### 8〜10. 店舗ID (shop1, shop2, shop3)
+それぞれ '' を返してください。
 
 ---
 
@@ -260,20 +260,20 @@ Bランク → 以下のいずれかに該当する場合。
 以下のJSON形式で出力してください。
 ※ **応答に \`\`\`json と \`\`\` を含めないでください。有効な JSON データのみを返します
 
-ex: {
-    "title": [ "title1", "title2", "title3", "title4", "title5" ],
-    "level": "A",
-    "measurement": "",
-    "measurement_type": {
-        "foreign": '',
-        "japanese": ""
-    },
-    "category": "",
-    "categoryList": ["事務、店舗用品","文房具","筆記用具"],
-    "condition": "1",
-    "shop1": "123",
-    "shop2": "123",
-    "shop3": "123"
+{
+"title": [ "title1", "title2", "title3", "title4", "title5" ],
+"level": "A",
+"measurement": "",
+"measurement_type": {
+    "foreign": '',
+    "japanese": ""
+},
+"category": "",
+"categoryList": ["事務、店舗用品","文房具","筆記用具"],
+"condition": "",
+"shop1": "",
+"shop2": "",
+"shop3": ""
 }
 
 ---
@@ -303,6 +303,7 @@ ex: {
             });
 
             const content = response.choices[0]?.message?.content;
+
             if (!content) {
                 throw new Error('No response from OpenAI');
             }
@@ -311,7 +312,7 @@ ex: {
             const analysis = JSON.parse(content) as OpenAIProductAnalysis;
 
             // Validate required fields
-            if (!analysis.title || !Array.isArray(analysis.title) || analysis.title.length === 0 || !analysis.category || !analysis.level) {
+            if (!analysis.title || !Array.isArray(analysis.title) || analysis.title.length === 0 || !analysis.level) {
                 throw new Error('Invalid response format from OpenAI');
             }
 
