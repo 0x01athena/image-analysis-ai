@@ -577,12 +577,12 @@ const WorkerRegistrationPage = () => {
                                                     >
                                                         <Edit2 className="w-4 h-4" />
                                                     </button>
-                                                    {/* <button
+                                                    <button
                                                         onClick={() => handleDelete(user)}
                                                         className="text-red-600 hover:text-red-900 transition-colors duration-300"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
-                                                    </button> */}
+                                                    </button>
                                                 </div>
                                             </td>
                                         </motion.tr>
