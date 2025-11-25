@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
+import ExcelJS from 'exceljs';
 
 const prisma = new PrismaClient();
 
@@ -514,6 +515,122 @@ export class ProductService {
             console.error('Error updating product category list:', error);
             throw error;
         }
+    }
+
+    /**
+     * Export products to new Excel file - creates トップス tab with 管理番号 and 色 columns
+     */
+    async exportProductsToExcel(): Promise<Buffer | ArrayBuffer> {
+        try {
+            // Get all products from database (try with category filter first, then all if none found)
+            let products = await prisma.product.findMany({
+                where: {
+                    category: 'トップス'
+                },
+                orderBy: { createdAt: 'desc' }
+            });
+
+            console.log(`Found ${products.length} products with category 'トップス' in database`);
+
+            // If no products with category トップス, get all products
+            if (products.length === 0) {
+                console.log('No products with category トップス found, exporting all products...');
+                products = await prisma.product.findMany({
+                    orderBy: { createdAt: 'desc' }
+                });
+                console.log(`Found ${products.length} total products in database`);
+            }
+
+            // Create a new workbook
+            const workbook = new ExcelJS.Workbook();
+
+            // Create worksheet with the category name as tab name
+            const worksheet = workbook.addWorksheet('トップス');
+
+            // Add header row manually
+            const headerRow = worksheet.addRow(['管理番号', '色']);
+            headerRow.font = { bold: true };
+            headerRow.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE0E0E0' }
+            };
+            headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+            // Set column widths
+            worksheet.getColumn(1).width = 20;
+            worksheet.getColumn(2).width = 50; // Wider for generation result
+
+            // Add data rows
+            console.log(`Adding ${products.length} products to Excel...`);
+            for (const product of products) {
+                // Use title as 生成結果 (generation result) for the '色' column
+                const generationResult = product.title || '';
+
+                // Add row with direct array values
+                const row = worksheet.addRow([
+                    product.managementNumber || '',
+                    generationResult
+                ]);
+
+                console.log(`Added row: ${product.managementNumber}, ${generationResult || '(no generation result)'}`);
+            }
+
+            console.log(`Total rows in worksheet: ${worksheet.rowCount} (including header)`);
+
+            // Generate buffer for response
+            const buffer = await workbook.xlsx.writeBuffer();
+
+            console.log(`Successfully exported ${products.length} products to Excel`);
+            console.log(`Buffer size: ${buffer.byteLength} bytes`);
+            return buffer;
+        } catch (error) {
+            console.error('Error exporting products to Excel:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Extract color from product data (title, categoryList, etc.)
+     */
+    private extractColorFromProduct(product: any): string | null {
+        // Option 1: Extract from title if it contains color information
+        if (product.title) {
+            const colorKeywords = [
+                '赤', '青', '緑', '黒', '白', '黄', '紫', 'ピンク', 'オレンジ', 'グレー',
+                '茶', 'ベージュ', 'ネイビー', 'カーキ', 'ゴールド', 'シルバー', 'レッド', 'ブルー',
+                'グリーン', 'ブラック', 'ホワイト', 'イエロー', 'パープル', 'オレンジ', 'グレー'
+            ];
+            for (const color of colorKeywords) {
+                if (product.title.includes(color)) {
+                    return color;
+                }
+            }
+        }
+
+        // Option 2: Extract from categoryList
+        if (product.categoryList) {
+            try {
+                const categoryList = JSON.parse(product.categoryList);
+                const colorKeywords = [
+                    '赤', '青', '緑', '黒', '白', '黄', '紫', 'ピンク', 'オレンジ', 'グレー',
+                    '茶', 'ベージュ', 'ネイビー', 'カーキ', 'ゴールド', 'シルバー'
+                ];
+                for (const category of categoryList) {
+                    if (typeof category === 'string') {
+                        for (const color of colorKeywords) {
+                            if (category.includes(color)) {
+                                return color;
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                // Ignore parsing errors
+            }
+        }
+
+        return null;
     }
 }
 

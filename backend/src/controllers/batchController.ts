@@ -812,6 +812,40 @@ class BatchController {
             });
         }
     };
+
+    /**
+     * Export products to new Excel file - creates トップス tab with 管理番号 and 色 columns
+     */
+    exportExcelFile = async (req: Request, res: Response): Promise<void> => {
+        try {
+            // Generate new Excel file
+            const buffer = await productService.exportProductsToExcel();
+
+            console.log('buffer', buffer);
+
+            // Set response headers for Excel file download
+            const filename = `トップス_products_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+            res.setHeader(
+                'Content-Type',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            );
+            res.setHeader(
+                'Content-Disposition',
+                `attachment; filename="${encodeURIComponent(filename)}"`
+            );
+
+            // Send buffer as response
+            res.send(buffer);
+        } catch (error) {
+            console.error('Error exporting Excel file:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to export Excel file',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
 }
 
 export const batchController = new BatchController();

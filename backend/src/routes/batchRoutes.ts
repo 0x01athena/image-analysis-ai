@@ -541,4 +541,23 @@ router.post('/products/:managementNumber/select-title', batchController.selectTi
  */
 router.delete('/products', batchController.deleteMultipleProducts);
 
+/**
+ * @swagger
+ * /api/batch/excel/export:
+ *   get:
+ *     summary: Export updated Excel file with 管理番号 and 色 columns updated
+ *     tags: [Batch]
+ *     responses:
+ *       200:
+ *         description: Excel file downloaded successfully
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       500:
+ *         description: Server error
+ */
+router.get('/excel/export', batchController.exportExcelFile);
+
 export default router;

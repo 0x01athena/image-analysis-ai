@@ -289,3 +289,37 @@ export const deleteMultipleProducts = async (managementNumbers) => {
 
     return response.json();
 };
+
+/**
+ * Export updated Excel file with 管理番号 and 色 columns updated
+ * @returns {Promise<Object>} Export result
+ */
+export const exportExcelFile = async () => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/batch/excel/export`, {
+            method: 'GET',
+        });
+
+        if (!response.ok) {
+            throw new Error('Export failed');
+        }
+
+        // Get the blob from response
+        const blob = await response.blob();
+
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `トップス_products_${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        return { success: true };
+    } catch (error) {
+        console.error('Error exporting Excel file:', error);
+        return { success: false, error: error.message };
+    }
+};

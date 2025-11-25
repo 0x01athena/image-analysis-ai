@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Eye, Trash2, ChevronLeft, ChevronRight, Filter, Search, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Eye, Trash2, ChevronLeft, ChevronRight, Filter, Search, ChevronsLeft, ChevronsRight, Download } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { getAllProducts, deleteProduct, deleteMultipleProducts } from '../../api/batchApi';
+import { getAllProducts, deleteProduct, deleteMultipleProducts, exportExcelFile } from '../../api/batchApi';
 
 const ProductsViewPage = () => {
     const navigate = useNavigate();
@@ -199,6 +199,20 @@ const ProductsViewPage = () => {
         }
     };
 
+    const handleExportExcel = async () => {
+        try {
+            const result = await exportExcelFile();
+            if (result.success) {
+                alert('Excelファイルのエクスポートが完了しました！');
+            } else {
+                alert('エクスポートに失敗しました: ' + (result.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error exporting Excel:', error);
+            alert('エクスポートエラー: ' + error.message);
+        }
+    };
+
     const getRankBadge = (rank) => {
         const colors = {
             'A': 'bg-green-100 text-green-800 border-green-200',
@@ -225,8 +239,19 @@ const ProductsViewPage = () => {
                 >
                     {/* Header */}
                     <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-4">商品一覧</h1>
-                        <p className="text-gray-600">データベースに保存された商品の一覧を表示します</p>
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900 mb-2">商品一覧</h1>
+                                <p className="text-gray-600">データベースに保存された商品の一覧を表示します</p>
+                            </div>
+                            <button
+                                onClick={handleExportExcel}
+                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-300 shadow-md hover:shadow-lg"
+                            >
+                                <Download size={20} />
+                                Excelエクスポート
+                            </button>
+                        </div>
                     </div>
 
                     {/* Enhanced Filters */}
