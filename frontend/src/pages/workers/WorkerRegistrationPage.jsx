@@ -36,7 +36,6 @@ const WorkerRegistrationPage = () => {
             setUsers(response.data || []);
         } catch (error) {
             console.error('Error loading users:', error);
-            alert('ユーザーの読み込みに失敗しました: ' + error.message);
         } finally {
             setLoading(false);
         }

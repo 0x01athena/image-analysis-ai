@@ -548,7 +548,7 @@ export class ProductService {
             const worksheet = workbook.addWorksheet('トップス');
 
             // Add header row manually
-            const headerRow = worksheet.addRow(['管理番号', '色']);
+            const headerRow = worksheet.addRow(['管理番号', '色', 'ランク', '金額']);
             headerRow.font = { bold: true };
             headerRow.fill = {
                 type: 'pattern',
@@ -558,22 +558,30 @@ export class ProductService {
             headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
             // Set column widths
-            worksheet.getColumn(1).width = 20;
-            worksheet.getColumn(2).width = 50; // Wider for generation result
+            worksheet.getColumn(1).width = 20; // 管理番号
+            worksheet.getColumn(2).width = 50; // 色 (生成結果)
+            worksheet.getColumn(3).width = 15; // ランク
+            worksheet.getColumn(4).width = 15; // 金額
 
             // Add data rows
             console.log(`Adding ${products.length} products to Excel...`);
             for (const product of products) {
                 // Use title as 生成結果 (generation result) for the '色' column
                 const generationResult = product.title || '';
+                // Get rank from condition field
+                const rank = product.condition || '';
+                // Get price, format as number
+                const price = product.price !== null && product.price !== undefined ? product.price : '';
 
                 // Add row with direct array values
                 const row = worksheet.addRow([
                     product.managementNumber || '',
-                    generationResult
+                    generationResult,
+                    rank,
+                    price
                 ]);
 
-                console.log(`Added row: ${product.managementNumber}, ${generationResult || '(no generation result)'}`);
+                console.log(`Added row: ${product.managementNumber}, ${generationResult || '(no generation result)'}, ${rank || '(no rank)'}, ${price || '(no price)'}`);
             }
 
             console.log(`Total rows in worksheet: ${worksheet.rowCount} (including header)`);
