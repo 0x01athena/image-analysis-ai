@@ -52,8 +52,9 @@ const ProductDetailsPage = () => {
                 shop2: productData.shop2 || '',
                 shop3: productData.shop3 || '',
                 price: productData.price || '',
-                imageReference: productData.imageReference !== undefined ? productData.imageReference : true,
-                packagingSize: productData.packagingSize || '通常'
+                imageReference: productData.imageReference || '画像参照',
+                packagingSize: productData.packagingSize || '通常',
+                season: productData.season || 'Θ'
             });
         } catch (error) {
             console.error('Error loading product:', error);
@@ -499,29 +500,20 @@ const ProductDetailsPage = () => {
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                {/* Category */}
+                                {/* Season Selector */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        カテゴリ
+                                        梱包記号
                                     </label>
-                                    <div className="flex items-center gap-2 justify-between">
-                                        <input
-                                            type="text"
-                                            value={formData.category}
-                                            onChange={(e) => handleInputChange('category', e.target.value)}
-                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent max-w-40"
-                                            placeholder="カテゴリコード"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowCategoryModal(true)}
-                                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center gap-3 w-full"
-                                            title="カテゴリを選択"
-                                        >
-                                            <FolderTree className="w-4 h-4" />
-                                            選択
-                                        </button>
-                                    </div>
+                                    <select
+                                        value={formData.season || ''}
+                                        onChange={(e) => handleInputChange('season', e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value="⊂">⊂</option>
+                                        <option value="⊇">⊇</option>
+                                        <option value="Θ">Θ</option>
+                                    </select>
                                 </div>
 
                                 {/* Product Type */}
@@ -557,21 +549,44 @@ const ProductDetailsPage = () => {
                                 </div>
                             </div>
 
-
-
-                            {/* Image Reference Checkbox */}
+                            {/* Category */}
                             <div>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={formData.imageReference !== undefined ? formData.imageReference : true}
-                                        onChange={(e) => handleInputChange('imageReference', e.target.checked)}
-                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                                    />
-                                    <span className="text-sm font-medium text-gray-700">
-                                        画像参照
-                                    </span>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    カテゴリ
                                 </label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        value={formData.category}
+                                        onChange={(e) => handleInputChange('category', e.target.value)}
+                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        placeholder="カテゴリコード"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCategoryModal(true)}
+                                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center gap-3"
+                                        title="カテゴリを選択"
+                                    >
+                                        <FolderTree className="w-4 h-4" />
+                                        選択
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Material (素材) */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    素材
+                                </label>
+                                <select
+                                    value={formData.imageReference || ''}
+                                    onChange={(e) => handleInputChange('imageReference', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                >
+                                    <option value="画像参照">画像参照</option>
+                                    <option value="/ソール">/ソール</option>
+                                </select>
                             </div>
 
                             {/* Marketplace IDs */}

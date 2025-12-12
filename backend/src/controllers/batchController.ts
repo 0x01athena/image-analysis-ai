@@ -293,6 +293,17 @@ class BatchController {
 
             console.log(`OpenAI analysis for product ${productId}:`, analysis);
 
+            // Determine imageReference based on product type
+            const typeArray = [
+                "カテゴリ", "管理番号", "タイトル", "属品", "ラック", "ランク", "型番", "コメント", "仕立て・収納", "素材", "色",
+                "サイズ", "トップス", "パンツ", "スカート", "ワンピース", "スカートスー", "パンツスーツ", "靴", "ブーツ", "スニーカー", "ベルト",
+                "ネクタイ縦横", "帽子", "バッグ", "ネックレス", "サングラス", "あまり", "出品日", "出品URL", "原価", "売値", "梱包サイズ",
+                "仕入先", "仕入日", "ID", "ブランド", "シリーズ名", "原産国"
+            ];
+            
+            const typeIndex = typeArray.indexOf(analysis.type || '');
+            const imageReference = (typeIndex > 9 && typeIndex < 11) ? "/ソール" : "画像参照";
+
             // Update the product in the database with the analysis results
             await productService.updateProductWithResults(productId, {
                 managementNumber: productId,
@@ -306,6 +317,8 @@ class BatchController {
                 category: analysis.category,
                 categoryList: analysis.categoryList || [], // Store category list from OpenAI
                 type: analysis.type,
+                season: analysis.season,
+                imageReference: imageReference,
                 shop1: analysis.shop1,
                 shop2: analysis.shop2,
                 shop3: analysis.shop3,
@@ -822,9 +835,6 @@ class BatchController {
             // Generate new Excel file
             const buffer = await productService.exportProductsToExcel();
 
-            console.log('buffer', buffer);
-
-            // Set response headers for Excel file download
             const filename = `products_export_${new Date().toISOString().split('T')[0]}.xlsx`;
 
             res.setHeader(

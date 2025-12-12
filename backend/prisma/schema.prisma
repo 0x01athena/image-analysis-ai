@@ -30,8 +30,9 @@ model Product {
   shop3            String?
   price            Float? 
   images           String   @default("[]") // JSON string for SQLite compatibility
-  imageReference   Boolean  @default(true) // 画像参照 checkbox
+  imageReference   String?  // 素材 (画像参照 or /ソール)
   packagingSize    String   @default("通常") // 梱包サイズ
+  season           String?  // シーズン (春夏:⊂, 秋冬:⊇, 通年:Θ)
   userId           String?  // User who processed this product
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

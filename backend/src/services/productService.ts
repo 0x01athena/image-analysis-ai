@@ -25,8 +25,9 @@ export interface ProductData {
     shop2?: string | null;
     shop3?: string | null;
     price?: number | null;
-    imageReference?: boolean | null;
+    imageReference?: string | null;
     packagingSize?: string | null;
+    season?: string | null;
     userId?: string | null;
 }
 
@@ -207,6 +208,7 @@ export class ProductService {
             if (data.price !== undefined) updateData.price = data.price !== null ? parseFloat(data.price as any) : null;
             if (data.imageReference !== undefined) updateData.imageReference = data.imageReference;
             if (data.packagingSize !== undefined) updateData.packagingSize = data.packagingSize;
+            if (data.season !== undefined) updateData.season = data.season;
             if (data.userId !== undefined) updateData.userId = data.userId;
 
             const updatedProduct = await prisma.product.update({
@@ -555,7 +557,6 @@ export class ProductService {
 
             for (const sheetName of blankSheetNames) {
                 workbook.addWorksheet(sheetName);
-                console.log(`Created blank sheet: ${sheetName}`);
             }
 
             // Create Sheet1 with product data
@@ -597,7 +598,6 @@ export class ProductService {
             let rowCount = 0;
             for (const product of products) {
                 try {
-                    // Parse measurementType for overseas size
                     let foreignSize = '';
                     try {
                         if (product.measurementType) {
@@ -608,45 +608,48 @@ export class ProductService {
                         console.log(`Error parsing measurementType for product ${product.managementNumber}:`, e);
                     }
 
-                    // Format price with ¥ prefix
                     const priceValue = product.price ? `¥${product.price}` : '¥0';
-
-                    // Type assertion for new fields
                     const productAny = product as any;
-
-                    // const final_title = product.title
-
-                    // ◇ Θ ジェイダ GYDA × what it isn't コラボ長袖Tシャツ ホワイト系 レディース FREE E 1511250015045
-
+                    const final_title = `${productAny.season} ${product.title} E ${product.managementNumber}` || '';
+                    const baseIndex = [
+                        "カテゴリ", "管理番号", "タイトル", "属品", "ラック", "ランク", "型番", "コメント", "仕立て・収納", "素材", "色",
+                        "サイズ", "トップス", "パンツ", "スカート", "ワンピース", "スカートスー", "パンツスーツ", "靴", "ブーツ", "スニーカー", "ベルト",
+                        "ネクタイ縦横", "帽子", "バッグ", "ネックレス", "サングラス", "あまり", "出品日", "出品URL", "原価", "売値", "梱包サイズ",
+                        "仕入先", "仕入日", "ID", "ブランド", "シリーズ名",
+                        "原産国"
+                    ].indexOf(productAny.type)
+                    const base = baseIndex === 0 ? "M" :
+                        baseIndex > 0 && baseIndex < 9 ? "W" :
+                            baseIndex > 9 && baseIndex < 11 ? "S" : "B"
 
                     const row = [
                         product.category || '',                                     // カテゴリ
                         product.managementNumber || '',                             // 管理番号
-                        product.title || '',                                        // タイトル
+                        final_title,                                                // タイトル
                         '無<br>採寸はAIが1cm各の格子背景で行っております。',      // 付属品
-                        'ベースW/K',                                                // ラック
+                        `ベース${base}/K`,                                                // ラック
                         product.condition || '',                                    // ランク
                         '',                                                         // 型番
                         getConditionDescription(product.condition),                 // コメント
                         '',                                                         // 仕立て・収納
-                        productAny.imageReference !== undefined && productAny.imageReference ? '有' : '無', // 素材
+                        productAny.imageReference || '',                            // 素材
                         product.title || '',                                        // 色
                         foreignSize,                                                // サイズ
-                        '',                                                         // トップス
-                        '',                                                         // パンツ
-                        '',                                                         // スカート
-                        '',                                                         // ワンピース
-                        '',                                                         // スカートスーツ
-                        '',                                                         // パンツスーツ
-                        '',                                                         // 靴
-                        '',                                                         // ブーツ
-                        '',                                                         // スニーカー
-                        '',                                                         // ベルト
-                        '',                                                         // ネクタイ縦横
-                        '',                                                         // 帽子
-                        '',                                                         // バッグ
-                        '',                                                         // ネックレス
-                        '',                                                         // サングラス
+                        product.type !== 'トップス' ? '着丈：cm　肩幅：cm　身幅：cm　袖丈：cm' : product.measurement ? product.measurement : '着丈：cm　肩幅：cm　身幅：cm　袖丈：cm',                                                         // トップス
+                        product.type !== 'パンツ' ? '股上：cm　股下：cm　ウエスト：cm　もも幅：cm　裾幅：cm' : product.measurement ? product.measurement : '股上：cm　股下：cm　ウエスト：cm　もも幅：cm　裾幅：cm',                                                         // パンツ
+                        product.type !== 'スカート' ? '着丈：cm　ウエスト：cm　ヒップ：cm' : product.measurement ? product.measurement : '着丈：cm　ウエスト：cm　ヒップ：cm',                                                         // スカート
+                        product.type !== 'ワンピース' ? '着丈：cm　肩幅：cm　身幅：cm　ウエスト：cm　袖丈：cm' : product.measurement ? product.measurement : '着丈：cm　肩幅：cm　身幅：cm　ウエスト：cm　袖丈：cm',                                                         // ワンピース
+                        product.type !== 'スカートスーツ' ? '【ジャケット】サイズ：　　着丈： cm　肩幅： cm　身幅： cm　袖丈： cm【スカート】サイズ：　　着丈： cm　ウエスト： cm　ヒップ： cm' : product.measurement ? product.measurement : '【ジャケット】サイズ：　　着丈： cm　肩幅： cm　身幅： cm　袖丈： cm【スカート】サイズ：　　着丈： cm　ウエスト： cm　ヒップ： cm',                                                         // スカートスーツ
+                        product.type !== 'パンツスーツ' ? '【ジャケット】サイズ：　　着丈： cm　肩幅： cm　身幅： cm　袖丈： cm【パンツ】サイズ：　　股上： cm　股下： cm　ウエスト： cm　もも幅： cm　裾幅： cm' : product.measurement ? product.measurement : '【ジャケット】サイズ：　　着丈： cm　肩幅： cm　身幅： cm　袖丈： cm【パンツ】サイズ：　　股上： cm　股下： cm　ウエスト： cm　もも幅： cm　裾幅： cm',                                                         // パンツスーツ
+                        product.type !== '靴' ? '底長： cm　底甲幅： cm　ヒール： cm' : product.measurement ? product.measurement : '底長： cm　底甲幅： cm　ヒール： cm',                                                         // 靴
+                        product.type !== 'ブーツ' ? '底長： cm　底甲幅： cm　ヒール： cm　高さ： cm　足入れ口円周： cm' : product.measurement ? product.measurement : '底長： cm　底甲幅： cm　ヒール： cm　高さ： cm　足入れ口円周： cm',                                                         // ブーツ
+                        product.type !== 'スニーカー' ? '底長： cm　底甲幅： cm　ヒール： cm' : product.measurement ? product.measurement : '底長： cm　底甲幅： cm　ヒール： cm',                                                         // スニーカー
+                        product.type !== 'ベルト' ? '全長cm　幅cm 最短cm 間隔cm 穴' : product.measurement ? product.measurement : '全長cm　幅cm 最短cm 間隔cm 穴',                                                         // ベルト
+                        product.type === 'ネックレス' ? product.measurement : '全長：約cm　最大幅：約cm',                                                         // ネクタイ縦横
+                        product.type !== '帽子' ? '内周： cm　高さ： cm　つば： cm' : product.measurement ? product.measurement : '内周： cm　高さ： cm　つば： cm',                                                         // 帽子
+                        product.type !== 'バッグ' ? '縦幅： cm　横幅： cm　マチ幅： cm　持ち手： cm' : product.measurement ? product.measurement : '縦幅： cm　横幅： cm　マチ幅： cm　持ち手： cm',                                                         // バッグ
+                        product.type !== 'ネックレス' ? '全長： cm　トップ：縦幅： cm　横幅： cm ' : product.measurement ? product.measurement : '全長： cm　トップ：縦幅： cm　横幅： cm ',                                                         // ネックレス
+                        product.type !== 'サングラス' ? 'レンズ幅縦横： xmm　フレーム幅： cm' : product.measurement ? product.measurement : 'レンズ幅縦横： xmm　フレーム幅： cm',                                                         // サングラス
                         '',                                                         // あまり
                         '',                                                         // 出品日
                         '',                                                         // 出品URL
@@ -668,13 +671,63 @@ export class ProductService {
                 }
             }
 
+            while (rowCount < 820) {
+                try {
+                    const row = [
+                        '',                                     // カテゴリ
+                        '',                             // 管理番号
+                        '◇ E',                                                // タイトル
+                        '無<br>採寸はAIが1cm各の格子背景で行っております。',      // 付属品
+                        `ベースB`,                                                // ラック
+                        '',                                    // ランク
+                        '',                                                         // 型番
+                        '',                 // コメント
+                        '',                                                         // 仕立て・収納
+                        '',                            // 素材
+                        '',                                        // 色
+                        '',                                                // サイズ
+                        '着丈：cm　肩幅：cm　身幅：cm　袖丈：cm',                                                         // トップス
+                        '股上：cm　股下：cm　ウエスト：cm　もも幅：cm　裾幅：cm',                                                         // パンツ
+                        '着丈：cm　ウエスト：cm　ヒップ：cm',                                                         // スカート
+                        '着丈：cm　肩幅：cm　身幅：cm　ウエスト：cm　袖丈：cm',                                                         // ワンピース
+                        '【ジャケット】サイズ：　　着丈： cm　肩幅： cm　身幅： cm　袖丈： cm【スカート】サイズ：　　着丈： cm　ウエスト： cm　ヒップ： cm',                                                         // スカートスーツ
+                        '【ジャケット】サイズ：　　着丈： cm　肩幅： cm　身幅： cm　袖丈： cm【パンツ】サイズ：　　股上： cm　股下： cm　ウエスト： cm　もも幅： cm　裾幅： cm',                                                         // パンツスーツ
+                        '底長： cm　底甲幅： cm　ヒール： cm',                                                         // 靴
+                        '底長： cm　底甲幅： cm　ヒール： cm　高さ： cm　足入れ口円周： cm',                                                         // ブーツ
+                        '底長： cm　底甲幅： cm　ヒール： cm',                                                         // スニーカー
+                        '全長cm　幅cm 最短cm 間隔cm 穴',                                                         // ベルト
+                        '全長：約cm　最大幅：約cm',                                                         // ネクタイ縦横
+                        '内周： cm　高さ： cm　つば： cm',                                                         // 帽子
+                        '縦幅： cm　横幅： cm　マチ幅： cm　持ち手： cm',                                                         // バッグ
+                        '全長： cm　トップ：縦幅： cm　横幅： cm ',                                                         // ネックレス
+                        'レンズ幅縦横： xmm　フレーム幅： cm',                                                         // サングラス
+                        '',                                                         // あまり
+                        '',                                                         // 出品日
+                        '',                                                         // 出品URL
+                        '',                                                         // 原価
+                        '¥0',                                                 // 売値
+                        '通常',                         // 梱包サイズ
+                        '¥0',                                                       // 仕入先
+                        '0',                                                        // 仕入日
+                        '1',                                                        // ID
+                        '0',                                                        // ブランド
+                        '',                                                         // シリーズ名
+                        ''                                                          // 原産国
+                    ];
+
+                    sheet1.addRow(row);
+                    rowCount++;
+                } catch (error) {
+                    console.error(`Error adding empty row:`, error);
+                }
+            }
+
             console.log(`Added ${rowCount} products to Sheet1 (out of ${products.length} total)`);
 
             // Generate buffer for response
             const buffer = await workbook.xlsx.writeBuffer();
 
             console.log(`Successfully exported Excel file with product data`);
-            console.log(`Buffer size: ${buffer.byteLength} bytes`);
             return buffer;
         } catch (error) {
             console.error('Error exporting products to Excel:', error);

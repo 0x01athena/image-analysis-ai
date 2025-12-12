@@ -7,50 +7,51 @@ import dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 export interface OpenAIProductAnalysis {
-    title: string[];
-    category: string;
-    categoryList: string[];
-    level: 'A' | 'B' | 'C';
-    measurement?: string;
-    measurement_type?: { foreign: string; japanese: string };
-    condition?: string;
-    type?: string;
-    shop1?: string;
-    shop2?: string;
-    shop3?: string;
+  title: string[];
+  category: string;
+  categoryList: string[];
+  level: 'A' | 'B' | 'C';
+  measurement?: string;
+  measurement_type?: { foreign: string; japanese: string };
+  condition?: string;
+  type?: string;
+  season?: string;
+  shop1?: string;
+  shop2?: string;
+  shop3?: string;
 }
 
 export class OpenAIService {
-    private client: OpenAI;
+  private client: OpenAI;
 
-    constructor() {
-        this.client = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY || '',
-            timeout: 120000
-        });
-    }
+  constructor() {
+    this.client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY || '',
+      timeout: 120000
+    });
+  }
 
-    /**
-     * Analyze product images using OpenAI Vision API
-     */
-    async analyzeProductImages(productId: string, imageFilenames: string[]): Promise<OpenAIProductAnalysis> {
-        try {
-            // Read and encode images
-            const imageContents = await Promise.all(
-                imageFilenames.map(async (filename) => {
-                    const imagePath = path.join(__dirname, '../../public/images', filename);
-                    const imageBuffer = fs.readFileSync(imagePath);
-                    return {
-                        type: "image_url" as const,
-                        image_url: {
-                            url: `data:image/jpeg;base64,${imageBuffer.toString('base64')}`,
-                            detail: "high" as const
-                        }
-                    };
-                })
-            );
+  /**
+   * Analyze product images using OpenAI Vision API
+   */
+  async analyzeProductImages(productId: string, imageFilenames: string[]): Promise<OpenAIProductAnalysis> {
+    try {
+      // Read and encode images
+      const imageContents = await Promise.all(
+        imageFilenames.map(async (filename) => {
+          const imagePath = path.join(__dirname, '../../public/images', filename);
+          const imageBuffer = fs.readFileSync(imagePath);
+          return {
+            type: "image_url" as const,
+            image_url: {
+              url: `data:image/jpeg;base64,${imageBuffer.toString('base64')}`,
+              detail: "high" as const
+            }
+          };
+        })
+      );
 
-            const prompt = `
+      const prompt = `
 あなたは日本のECサイト（楽天市場、Yahoo!ショッピング、メルカリなど）向けの商品カタログ作成と商品タイトル生成の専門家です。
 以下の画像を分析し、製品情報を詳細に抽出してJSON形式で出力してください。出力は必ず日本語で行ってください。
 
@@ -302,7 +303,25 @@ Bランク → 以下のいずれかに該当する場合。
 
 ---
 
-### 9〜11. 店舗ID (shop1, shop2, shop3)
+### 9. シーズン (season)
+画像および商品情報を分析し、商品がどのシーズンに適しているかを判定して、以下のシンボルのいずれかを出力してください。
+
+**シーズン分類：**
+- ⊂ : 春夏（春・夏シーズン向けの商品）
+- ⊇ : 秋冬（秋・冬シーズン向けの商品）
+- Θ : 通年（一年中着用可能な商品）
+
+**判定ルール：**
+- 商品の素材、デザイン、厚さ、スタイルなどを分析してシーズンを判定してください。
+- 春夏の特徴：薄手の素材、涼しげなデザイン、明るい色合い、半袖・ノースリーブなど
+- 秋冬の特徴：厚手の素材、暖かそうなデザイン、ダークな色合い、長袖・コート・ブーツなど
+- 通年の特徴：季節を問わず着用可能なデザインや素材
+- 確信が持てない場合でも、最も適切と思われるシンボルを必ず選択してください。
+- 出力は上記シンボルのいずれか1文字のみを返してください（例: "⊂", "⊇", "Θ"）。
+
+---
+
+### 10〜12. 店舗ID (shop1, shop2, shop3)
 それぞれ '' を返してください。
 
 ---
@@ -323,6 +342,7 @@ Bランク → 以下のいずれかに該当する場合。
 "categoryList": ["事務、店舗用品","文房具","筆記用具"],
 "condition": "3",
 "type": "トップス",
+"season": "Θ",
 "shop1": "",
 "shop2": "",
 "shop3": ""
@@ -336,82 +356,83 @@ Bランク → 以下のいずれかに該当する場合。
 - JSON以外の文字（コードフェンス・コメント・説明）は一切禁止。
 `;
 
-            const response = await this.client.chat.completions.create({
-                model: "gpt-4.1",
-                messages: [
-                    {
-                        role: "user",
-                        content: [
-                            {
-                                type: "text",
-                                text: prompt
-                            },
-                            ...imageContents
-                        ]
-                    }
-                ],
-                max_tokens: 2000,
-                temperature: 0.3,
-            });
+      const response = await this.client.chat.completions.create({
+        model: "gpt-4.1",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: prompt
+              },
+              ...imageContents
+            ]
+          }
+        ],
+        max_tokens: 2000,
+        temperature: 0.3,
+      });
 
-            const content = response.choices[0]?.message?.content;
+      const content = response.choices[0]?.message?.content;
 
-            console.log('OpenAI response:', content);
+      console.log('OpenAI response:', content);
 
-            if (!content) {
-                throw new Error('No response from OpenAI');
-            }
+      if (!content) {
+        throw new Error('No response from OpenAI');
+      }
 
-            // Parse JSON response
-            const analysis = JSON.parse(content) as OpenAIProductAnalysis;
+      // Parse JSON response
+      const analysis = JSON.parse(content) as OpenAIProductAnalysis;
 
-            // Validate required fields
-            if (!analysis.title || !Array.isArray(analysis.title) || analysis.title.length === 0 || !analysis.level) {
-                throw new Error('Invalid response format from OpenAI');
-            }
+      // Validate required fields
+      if (!analysis.title || !Array.isArray(analysis.title) || analysis.title.length === 0 || !analysis.level) {
+        throw new Error('Invalid response format from OpenAI');
+      }
 
-            // Ensure categoryList exists, default to empty array if not provided
-            if (!analysis.categoryList || !Array.isArray(analysis.categoryList)) {
-                analysis.categoryList = [];
-            }
+      // Ensure categoryList exists, default to empty array if not provided
+      if (!analysis.categoryList || !Array.isArray(analysis.categoryList)) {
+        analysis.categoryList = [];
+      }
 
-            return analysis;
+      return analysis;
 
-        } catch (error) {
-            console.error(`Error analyzing product ${productId}:`, error);
+    } catch (error) {
+      console.error(`Error analyzing product ${productId}:`, error);
 
-            // Return default values if OpenAI fails
-            return {
-                title: [''],
-                category: '',
-                categoryList: [],
-                level: 'B',
-                measurement: '',
-                condition: '',
-                type: '',
-                shop1: '',
-                shop2: '',
-                shop3: ''
-            };
-        }
+      // Return default values if OpenAI fails
+      return {
+        title: [''],
+        category: '',
+        categoryList: [],
+        level: 'B',
+        measurement: '',
+        condition: '',
+        type: '',
+        season: '',
+        shop1: '',
+        shop2: '',
+        shop3: ''
+      };
     }
+  }
 
-    /**
-     * Test OpenAI connection
-     */
-    async testConnection(): Promise<boolean> {
-        try {
-            const response = await this.client.chat.completions.create({
-                model: "gpt-4.1",
-                messages: [{ role: "user", content: "Hello" }],
-                max_tokens: 10
-            });
-            return !!response.choices[0]?.message?.content;
-        } catch (error) {
-            console.error('OpenAI connection test failed:', error);
-            return false;
-        }
+  /**
+   * Test OpenAI connection
+   */
+  async testConnection(): Promise<boolean> {
+    try {
+      const response = await this.client.chat.completions.create({
+        model: "gpt-4.1",
+        messages: [{ role: "user", content: "Hello" }],
+        max_tokens: 10
+      });
+      return !!response.choices[0]?.message?.content;
+    } catch (error) {
+      console.error('OpenAI connection test failed:', error);
+      return false;
     }
+  }
 }
 
 export const openAIService = new OpenAIService();
