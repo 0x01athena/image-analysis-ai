@@ -25,6 +25,8 @@ export interface ProductData {
     shop2?: string | null;
     shop3?: string | null;
     price?: number | null;
+    imageReference?: boolean | null;
+    packagingSize?: string | null;
     userId?: string | null;
 }
 
@@ -203,6 +205,8 @@ export class ProductService {
             if (data.shop2 !== undefined) updateData.shop2 = data.shop2;
             if (data.shop3 !== undefined) updateData.shop3 = data.shop3;
             if (data.price !== undefined) updateData.price = data.price !== null ? parseFloat(data.price as any) : null;
+            if (data.imageReference !== undefined) updateData.imageReference = data.imageReference;
+            if (data.packagingSize !== undefined) updateData.packagingSize = data.packagingSize;
             if (data.userId !== undefined) updateData.userId = data.userId;
 
             const updatedProduct = await prisma.product.update({
@@ -540,7 +544,6 @@ export class ProductService {
                 products = await prisma.product.findMany({
                     orderBy: { createdAt: 'desc' }
                 });
-                console.log(`Found ${products.length} total products in database`);
             }
 
             // Create a new workbook
@@ -565,17 +568,11 @@ export class ProductService {
             worksheet.getColumn(3).width = 15; // ランク
             worksheet.getColumn(4).width = 15; // 金額
 
-            // Add data rows
-            console.log(`Adding ${products.length} products to Excel...`);
             for (const product of products) {
-                // Use title as 生成結果 (generation result) for the '色' column
                 const generationResult = product.title || '';
-                // Get rank from condition field
                 const rank = product.condition || '';
-                // Get price, format as number
                 const price = product.price !== null && product.price !== undefined ? product.price : '';
 
-                // Add row with direct array values
                 const row = worksheet.addRow([
                     product.managementNumber || '',
                     generationResult,
@@ -583,7 +580,6 @@ export class ProductService {
                     price
                 ]);
 
-                console.log(`Added row: ${product.managementNumber}, ${generationResult || '(no generation result)'}, ${rank || '(no rank)'}, ${price || '(no price)'}`);
             }
 
             console.log(`Total rows in worksheet: ${worksheet.rowCount} (including header)`);

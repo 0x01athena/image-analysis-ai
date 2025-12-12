@@ -47,10 +47,13 @@ const ProductDetailsPage = () => {
                 measurementType: measurementTypeData,
                 condition: productData.condition || '',
                 category: productData.category || '',
+                type: productData.type || '',
                 shop1: productData.shop1 || '',
                 shop2: productData.shop2 || '',
                 shop3: productData.shop3 || '',
-                price: productData.price || ''
+                price: productData.price || '',
+                imageReference: productData.imageReference !== undefined ? productData.imageReference : true,
+                packagingSize: productData.packagingSize || '通常'
             });
         } catch (error) {
             console.error('Error loading product:', error);
@@ -466,42 +469,109 @@ const ProductDetailsPage = () => {
                             </div>
 
                             {/* Condition */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    コンディション
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.condition}
-                                    onChange={(e) => handleInputChange('condition', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    placeholder="1"
-                                />
-                            </div>
-
-                            {/* Category */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    カテゴリ
-                                </label>
-                                <div className="flex items-center gap-2">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        コンディション
+                                    </label>
                                     <input
                                         type="text"
-                                        value={formData.category}
-                                        onChange={(e) => handleInputChange('category', e.target.value)}
-                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="カテゴリコード"
+                                        value={formData.condition}
+                                        onChange={(e) => handleInputChange('condition', e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        placeholder="1"
                                     />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowCategoryModal(true)}
-                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center gap-2"
-                                        title="カテゴリを選択"
-                                    >
-                                        <FolderTree className="w-4 h-4" />
-                                        選択
-                                    </button>
                                 </div>
+                                {/* Packaging Size */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        梱包サイズ
+                                    </label>
+                                    <select
+                                        value={formData.packagingSize || '通常'}
+                                        onChange={(e) => handleInputChange('packagingSize', e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value="通常">通常</option>
+                                        <option value="梱包サイズは特大サイズになります。">梱包サイズは特大サイズになります。</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* Category */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        カテゴリ
+                                    </label>
+                                    <div className="flex items-center gap-2 justify-between">
+                                        <input
+                                            type="text"
+                                            value={formData.category}
+                                            onChange={(e) => handleInputChange('category', e.target.value)}
+                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent max-w-40"
+                                            placeholder="カテゴリコード"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCategoryModal(true)}
+                                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center gap-3 w-full"
+                                            title="カテゴリを選択"
+                                        >
+                                            <FolderTree className="w-4 h-4" />
+                                            選択
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Product Type */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        商品タイプ
+                                    </label>
+                                    <select
+                                        value={formData.type || ''}
+                                        onChange={(e) => handleInputChange('type', e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value="">選択してください</option>
+                                        <option value="複数商品">複数商品</option>
+                                        <option value="トップス">トップス</option>
+                                        <option value="パンツ">パンツ</option>
+                                        <option value="スカート">スカート</option>
+                                        <option value="ワンピース">ワンピース</option>
+                                        <option value="オールインワン">オールインワン</option>
+                                        <option value="スカートスーツ">スカートスーツ</option>
+                                        <option value="パンツスーツ">パンツスーツ</option>
+                                        <option value="アンサンブル">アンサンブル</option>
+                                        <option value="靴">靴</option>
+                                        <option value="ブーツ">ブーツ</option>
+                                        <option value="ベルト">ベルト</option>
+                                        <option value="ネクタイ">ネクタイ</option>
+                                        <option value="縦横">縦横</option>
+                                        <option value="帽子">帽子</option>
+                                        <option value="バッグ">バッグ</option>
+                                        <option value="ネックレス">ネックレス</option>
+                                        <option value="サングラス">サングラス</option>
+                                    </select>
+                                </div>
+                            </div>
+
+
+
+                            {/* Image Reference Checkbox */}
+                            <div>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.imageReference !== undefined ? formData.imageReference : true}
+                                        onChange={(e) => handleInputChange('imageReference', e.target.checked)}
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                    />
+                                    <span className="text-sm font-medium text-gray-700">
+                                        画像参照
+                                    </span>
+                                </label>
                             </div>
 
                             {/* Marketplace IDs */}
