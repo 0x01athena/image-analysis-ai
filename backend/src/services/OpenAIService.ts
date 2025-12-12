@@ -14,6 +14,7 @@ export interface OpenAIProductAnalysis {
     measurement?: string;
     measurement_type?: { foreign: string; japanese: string };
     condition?: string;
+    type?: string;
     shop1?: string;
     shop2?: string;
     shop3?: string;
@@ -251,7 +252,38 @@ Bランク → 以下のいずれかに該当する場合。
 
 ---
 
-### 8〜10. 店舗ID (shop1, shop2, shop3)
+### 8. 商品タイプ (type)
+画像および商品情報を分析し、以下の商品タイプリストから該当するタイプを1つ選択してください。
+
+**商品タイプリスト：**
+- 複数商品
+- トップス
+- パンツ
+- スカート
+- ワンピース
+- オールインワン
+- スカートスーツ
+- パンツスーツ
+- アンサンブル
+- 靴
+- ブーツ
+- ベルト
+- ネクタイ
+- 縦横
+- 帽子
+- バッグ
+- ネックレス
+- サングラス
+
+**判定ルール：**
+- 画像から商品の形状、デザイン、特徴を分析して最も適切なタイプを選択してください。
+- 複数の商品が写っている場合は「複数商品」を選択してください。
+- 確信が持てない場合でも、最も近いと思われるタイプを必ず選択してください。
+- 出力は上記リストのいずれかの文字列をそのまま返してください。
+
+---
+
+### 9〜11. 店舗ID (shop1, shop2, shop3)
 それぞれ '' を返してください。
 
 ---
@@ -271,6 +303,7 @@ Bランク → 以下のいずれかに該当する場合。
 "category": "",
 "categoryList": ["事務、店舗用品","文房具","筆記用具"],
 "condition": "",
+"type": "トップス",
 "shop1": "",
 "shop2": "",
 "shop3": ""
@@ -304,6 +337,8 @@ Bランク → 以下のいずれかに該当する場合。
 
             const content = response.choices[0]?.message?.content;
 
+            console.log('OpenAI response:', content);
+
             if (!content) {
                 throw new Error('No response from OpenAI');
             }
@@ -334,6 +369,7 @@ Bランク → 以下のいずれかに該当する場合。
                 level: 'B',
                 measurement: '',
                 condition: '',
+                type: '',
                 shop1: '',
                 shop2: '',
                 shop3: ''

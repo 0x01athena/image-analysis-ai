@@ -24,6 +24,7 @@ model Product {
   condition        String?
   category         String?
   categoryList     String?  @default("[]")
+  type             String?
   shop1            String?
   shop2            String?
   shop3            String?

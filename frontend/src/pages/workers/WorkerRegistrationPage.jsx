@@ -163,7 +163,6 @@ const WorkerRegistrationPage = () => {
 
         try {
             await deleteMultipleUsers([user.id]);
-            alert('ユーザーが正常に削除されました');
             loadUsers();
         } catch (error) {
             console.error('Error deleting user:', error);

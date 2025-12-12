@@ -166,7 +166,6 @@ const ProductDetailsPage = () => {
             await selectTitle(managementNumber, selectedTitle);
             setFormData(prev => ({ ...prev, title: selectedTitle }));
             setShowTitleSelector(false);
-            alert('タイトルを選択しました');
         } catch (error) {
             console.error('Error selecting title:', error);
             alert('タイトルの選択に失敗しました: ' + error.message);
@@ -361,7 +360,7 @@ const ProductDetailsPage = () => {
                                     value={formData.title}
                                     onChange={(e) => handleInputChange('title', e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    rows={3}
+                                    rows={2}
                                     placeholder="商品タイトル"
                                 />
                                 {/* Character Count Display */}
@@ -598,15 +597,6 @@ const ProductDetailsPage = () => {
                                         </div>
                                     </div>
                                 ))}
-                            </div>
-
-                            <div className="mt-6 flex justify-end gap-3">
-                                <button
-                                    onClick={() => setShowTitleSelector(false)}
-                                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-300"
-                                >
-                                    キャンセル
-                                </button>
                             </div>
                         </motion.div>
                     </div>

@@ -20,6 +20,7 @@ export interface ProductData {
     condition?: string | null;
     category?: string | null;
     categoryList?: string[] | null;
+    type?: string | null;
     shop1?: string | null;
     shop2?: string | null;
     shop3?: string | null;
@@ -197,6 +198,7 @@ export class ProductService {
             if (data.condition !== undefined) updateData.condition = data.condition;
             if (data.category !== undefined) updateData.category = data.category;
             if (data.categoryList !== undefined) updateData.categoryList = JSON.stringify(data.categoryList);
+            if (data.type !== undefined) updateData.type = data.type;
             if (data.shop1 !== undefined) updateData.shop1 = data.shop1;
             if (data.shop2 !== undefined) updateData.shop2 = data.shop2;
             if (data.shop3 !== undefined) updateData.shop3 = data.shop3;

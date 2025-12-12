@@ -305,6 +305,7 @@ class BatchController {
                 condition: analysis.condition,
                 category: analysis.category,
                 categoryList: analysis.categoryList || [], // Store category list from OpenAI
+                type: analysis.type,
                 shop1: analysis.shop1,
                 shop2: analysis.shop2,
                 shop3: analysis.shop3,
