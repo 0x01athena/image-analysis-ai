@@ -560,4 +560,62 @@ router.delete('/products', batchController.deleteMultipleProducts);
  */
 router.get('/excel/export', batchController.exportExcelFile);
 
+/**
+ * @swagger
+ * /api/batch/excel/history:
+ *   get:
+ *     summary: Get all Excel export history
+ *     tags: [Batch]
+ *     responses:
+ *       200:
+ *         description: Export history retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/excel/history', batchController.getExportHistory);
+
+/**
+ * @swagger
+ * /api/batch/excel/history/{userId}:
+ *   get:
+ *     summary: Get Excel export history by user ID
+ *     tags: [Batch]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Export history retrieved successfully
+ *       400:
+ *         description: User ID required
+ *       500:
+ *         description: Server error
+ */
+router.get('/excel/history/:userId', batchController.getExportHistoryByUser);
+
+/**
+ * @swagger
+ * /api/batch/excel/history/{id}:
+ *   delete:
+ *     summary: Delete Excel export history
+ *     tags: [Batch]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Export history deleted successfully
+ *       400:
+ *         description: Export history ID required
+ *       500:
+ *         description: Server error
+ */
+router.delete('/excel/history/:id', batchController.deleteExportHistory);
+
 export default router;

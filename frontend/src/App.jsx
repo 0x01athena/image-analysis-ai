@@ -7,6 +7,7 @@ import BatchProcessingPage from './pages/batch-processing/BatchProcessingPage';
 import ProductsViewPage from './pages/products/ProductsViewPage';
 import ProductDetailsPage from './pages/products/ProductDetailsPage';
 import WorkerRegistrationPage from './pages/workers/WorkerRegistrationPage';
+import ExportHistoryPage from './pages/exports/ExportHistoryPage';
 import { UploadProvider } from './contexts/UploadContext';
 import "./App.css";
 
@@ -24,6 +25,7 @@ function App() {
               <Route path="/products" element={<ProductsViewPage />} />
               <Route path="/products/:managementNumber" element={<ProductDetailsPage />} />
               <Route path="/workers" element={<WorkerRegistrationPage />} />
+              <Route path="/export-history" element={<ExportHistoryPage />} />
             </Routes>
           </div>
         </div>

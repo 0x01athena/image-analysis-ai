@@ -52,6 +52,7 @@ model User {
   // Relations
   workProcesses WorkProcess[]
   products      Product[]
+  excelExports  ExcelExportHistory[]
   
   @@map("users")
 }
@@ -85,4 +86,17 @@ model Category {
   category8     String?         
   
   @@map("categories")
+}
+
+model ExcelExportHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  fileName    String
+  fileUrl     String
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("excel_export_history")
 }

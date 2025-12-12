@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
-import { productService, ProductImages } from '../services/productService';
+import { productService, ProductImages } from '../services/ProductService';
 import { openAIService, OpenAIProductAnalysis } from '../services/OpenAIService';
 import { workProcessService } from '../services/WorkProcessService';
 import { userService } from '../services/UserService';
 import { categoryService } from '../services/CategoryService';
+import { excelExportHistoryService } from '../services/ExcelExportHistoryService';
 
 
 
@@ -300,7 +301,7 @@ class BatchController {
                 "ネクタイ縦横", "帽子", "バッグ", "ネックレス", "サングラス", "あまり", "出品日", "出品URL", "原価", "売値", "梱包サイズ",
                 "仕入先", "仕入日", "ID", "ブランド", "シリーズ名", "原産国"
             ];
-            
+
             const typeIndex = typeArray.indexOf(analysis.type || '');
             const imageReference = (typeIndex > 9 && typeIndex < 11) ? "/ソール" : "画像参照";
 
@@ -832,10 +833,32 @@ class BatchController {
      */
     exportExcelFile = async (req: Request, res: Response): Promise<void> => {
         try {
+            // Get userId from request body or query
+            const userId = (req.body?.userId || req.query?.userId) as string;
+
+            if (!userId) {
+                res.status(400).json({
+                    success: false,
+                    message: 'User ID is required'
+                });
+                return;
+            }
+
+            // Verify user exists
+            const user = await userService.getUserById(userId);
+            if (!user) {
+                res.status(404).json({
+                    success: false,
+                    message: 'User not found'
+                });
+                return;
+            }
+
             // Generate new Excel file
             const buffer = await productService.exportProductsToExcel();
 
-            const filename = `products_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+            // Save file and create history record
+            const history = await excelExportHistoryService.saveExportHistory(userId, buffer);
 
             res.setHeader(
                 'Content-Type',
@@ -843,16 +866,94 @@ class BatchController {
             );
             res.setHeader(
                 'Content-Disposition',
-                `attachment; filename="${encodeURIComponent(filename)}"`
+                `attachment; filename="${encodeURIComponent(history.fileName)}"`
             );
 
             // Send buffer as response
             res.send(buffer);
-        } catch (error) {
-            console.error('Error exporting Excel file:', error);
+        } catch (error: any) {
+            console.log('Error exporting Excel file:', error);
             res.status(500).json({
                 success: false,
-                message: 'Failed to export Excel file',
+                message: error instanceof Error ? error.message : 'Unknown error',
+                managementNumber: error.managementNumber || null
+            });
+        }
+    };
+
+    /**
+     * Get all Excel export history
+     */
+    getExportHistory = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const history = await excelExportHistoryService.getAllExportHistory();
+            res.status(200).json({
+                success: true,
+                data: history
+            });
+        } catch (error) {
+            console.error('Error getting export history:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get export history',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Get export history by user ID
+     */
+    getExportHistoryByUser = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { userId } = req.params;
+            if (!userId) {
+                res.status(400).json({
+                    success: false,
+                    message: 'User ID is required'
+                });
+                return;
+            }
+
+            const history = await excelExportHistoryService.getExportHistoryByUser(userId);
+            res.status(200).json({
+                success: true,
+                data: history
+            });
+        } catch (error) {
+            console.error('Error getting export history by user:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get export history',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Delete export history
+     */
+    deleteExportHistory = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { id } = req.params;
+            if (!id) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Export history ID is required'
+                });
+                return;
+            }
+
+            await excelExportHistoryService.deleteExportHistory(id);
+            res.status(200).json({
+                success: true,
+                message: 'Export history deleted successfully'
+            });
+        } catch (error) {
+            console.error('Error deleting export history:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to delete export history',
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
         }

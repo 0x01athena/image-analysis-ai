@@ -3,10 +3,12 @@ import { motion } from 'framer-motion';
 import { Eye, Trash2, ChevronLeft, ChevronRight, Filter, Search, ChevronsLeft, ChevronsRight, Download } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAllProducts, deleteProduct, deleteMultipleProducts, exportExcelFile } from '../../api/batchApi';
+import { useUserSession } from '../../hooks/useUserSession';
 
 const ProductsViewPage = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
+    const { selectedUser } = useUserSession();
 
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -205,11 +207,40 @@ const ProductsViewPage = () => {
             if (result.success) {
                 alert('Excelファイルのエクスポートが完了しました！');
             } else {
-                alert('エクスポートに失敗しました: ' + (result.error || 'Unknown error'));
+                const errorMessage = result.error || 'Unknown error';
+                const managementNumber = result.managementNumber;
+
+                if (managementNumber) {
+                    const confirmed = window.confirm(
+                        `エクスポートに失敗しました: ${errorMessage}\n\n` +
+                        `問題のある商品の詳細ページに移動しますか？\n` +
+                        `管理番号: ${managementNumber}`
+                    );
+
+                    if (confirmed) {
+                        navigate(`/products/${managementNumber}`);
+                    }
+                } else {
+                    alert('エクスポートに失敗しました: \n' + errorMessage);
+                }
             }
         } catch (error) {
             console.error('Error exporting Excel:', error);
-            alert('エクスポートエラー: ' + error.message);
+            const managementNumber = error.managementNumber;
+
+            if (managementNumber) {
+                const confirmed = window.confirm(
+                    `エクスポートエラー: ${error.message}\n\n` +
+                    `問題のある商品の詳細ページに移動しますか？\n` +
+                    `管理番号: ${managementNumber}`
+                );
+
+                if (confirmed) {
+                    navigate(`/products/${managementNumber}`);
+                }
+            } else {
+                alert('エクスポートエラー: ' + error.message);
+            }
         }
     };
 

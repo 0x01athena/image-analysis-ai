@@ -296,22 +296,39 @@ export const deleteMultipleProducts = async (managementNumbers) => {
  */
 export const exportExcelFile = async () => {
     try {
-        const response = await fetch(`${API_BASE_URL}/batch/excel/export`, {
+        const userId = JSON.parse(localStorage.getItem('selectedUser')).id;
+
+        const response = await fetch(`${API_BASE_URL}/batch/excel/export?userId=${userId}`, {
             method: 'GET',
         });
 
         if (!response.ok) {
-            throw new Error('Export failed');
+            const errorData = await response.json();
+            const error = new Error(errorData.message || 'Export failed');
+            error.managementNumber = errorData.managementNumber || null;
+            throw error;
         }
 
         // Get the blob from response
         const blob = await response.blob();
 
+        // Get filename from Content-Disposition header if available
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = `products_export_${new Date().toISOString().replace(/:/g, '-').replace(/\./g, '-')}.xlsx`;
+
+        if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+            if (filenameMatch && filenameMatch[1]) {
+                filename = filenameMatch[1].replace(/['"]/g, '');
+                filename = decodeURIComponent(filename);
+            }
+        }
+
         // Create download link
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `products_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -320,6 +337,71 @@ export const exportExcelFile = async () => {
         return { success: true };
     } catch (error) {
         console.error('Error exporting Excel file:', error);
-        return { success: false, error: error.message };
+        return {
+            success: false,
+            error: error.message,
+            managementNumber: error.managementNumber || null
+        };
+    }
+};
+
+/**
+ * Get all Excel export history
+ * @returns {Promise<Object>} Export history
+ */
+export const getExportHistory = async () => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/batch/excel/history`);
+
+        if (!response.ok) {
+            throw new Error('Failed to get export history');
+        }
+
+        return response.json();
+    } catch (error) {
+        console.error('Error getting export history:', error);
+        throw error;
+    }
+};
+
+/**
+ * Get Excel export history by user ID
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} Export history
+ */
+export const getExportHistoryByUser = async (userId) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/batch/excel/history/${userId}`);
+
+        if (!response.ok) {
+            throw new Error('Failed to get export history');
+        }
+
+        return response.json();
+    } catch (error) {
+        console.error('Error getting export history by user:', error);
+        throw error;
+    }
+};
+
+/**
+ * Delete Excel export history
+ * @param {string} id - Export history ID
+ * @returns {Promise<Object>} Delete result
+ */
+export const deleteExportHistory = async (id) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/batch/excel/history/${id}`, {
+            method: 'DELETE',
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to delete export history');
+        }
+
+        return response.json();
+    } catch (error) {
+        console.error('Error deleting export history:', error);
+        throw error;
     }
 };

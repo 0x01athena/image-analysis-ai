@@ -67,6 +67,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve uploaded files
 app.use(express.static(path.join(__dirname, '../dist')));
+
 app.use('/public', express.static(path.join(__dirname, '../public')));
 
 // Swagger documentation

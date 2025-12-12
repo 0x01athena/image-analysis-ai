@@ -664,10 +664,49 @@ export class ProductService {
                         ''                                                          // 原産国
                     ];
 
+                    let error = "";
+                    if (row[0] === '') error = `${headers[0]}が空です。`;
+                    if (row[1] === '') error = `${headers[1]}が空です。`;
+                    if (row[2] === '') error = `${headers[2]}が空です。`;
+                    if (row[3] === '') error = `${headers[3]}が空です。`;
+                    if (row[4] === '') error = `${headers[4]}が空です。`;
+                    if (row[5] === '') error = `${headers[5]}が空です。`;
+                    if (row[7] === '') error = `${headers[7]}が空です。`;
+                    if (row[9] === '') error = `${headers[9]}が空です。`;
+                    if (row[10] === '') error = `${headers[10]}が空です。`;
+                    if (row[12] === '') error = `${headers[12]}が空です。`;
+                    if (row[13] === '') error = `${headers[13]}が空です。`;
+                    if (row[14] === '') error = `${headers[14]}が空です。`;
+                    if (row[15] === '') error = `${headers[15]}が空です。`;
+                    if (row[16] === '') error = `${headers[16]}が空です。`;
+                    if (row[17] === '') error = `${headers[17]}が空です。`;
+                    if (row[18] === '') error = `${headers[18]}が空です。`;
+                    if (row[19] === '') error = `${headers[19]}が空です。`;
+                    if (row[20] === '') error = `${headers[20]}が空です。`;
+                    if (row[21] === '') error = `${headers[21]}が空です。`;
+                    if (row[22] === '') error = `${headers[22]}が空です。`;
+                    if (row[23] === '') error = `${headers[23]}が空です。`;
+                    if (row[24] === '') error = `${headers[24]}が空です。`;
+                    if (row[25] === '') error = `${headers[25]}が空です。`;
+                    if (row[26] === '') error = `${headers[26]}が空です。`;
+                    if (row[31] === '') error = `${headers[31]}が空です。`;
+                    if (row[32] === '') error = `${headers[32]}が空です。`;
+                    if (row[33] === '') error = `${headers[33]}が空です。`;
+                    if (row[34] === '') error = `${headers[34]}が空です。`;
+                    if (row[35] === '') error = `${headers[35]}が空です。`;
+                    if (row[36] === '') error = `${headers[36]}が空です。`;
+
+                    if (error !== "") {
+                        const exportError: any = new Error(`管理番号: ${product.managementNumber}, 理由: ${error}`);
+                        exportError.managementNumber = product.managementNumber;
+                        throw exportError;
+                    }
+
                     sheet1.addRow(row);
                     rowCount++;
                 } catch (error) {
-                    console.error(`Error processing product ${product.managementNumber}:`, error);
+                    console.log(error);
+                    throw error;
                 }
             }
 
@@ -724,7 +763,6 @@ export class ProductService {
 
             console.log(`Added ${rowCount} products to Sheet1 (out of ${products.length} total)`);
 
-            // Generate buffer for response
             const buffer = await workbook.xlsx.writeBuffer();
 
             console.log(`Successfully exported Excel file with product data`);
