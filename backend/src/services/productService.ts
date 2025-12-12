@@ -524,36 +524,53 @@ export class ProductService {
     }
 
     /**
-     * Export products to new Excel file - creates トップス tab with 管理番号 and 色 columns
+     * Export products to new Excel file - creates multiple sheets as specified
      */
     async exportProductsToExcel(): Promise<Buffer | ArrayBuffer> {
         try {
-            // Get all products from database (try with category filter first, then all if none found)
-            let products = await prisma.product.findMany({
-                where: {
-                    category: 'トップス'
-                },
+            // Get all products from database
+            const products = await prisma.product.findMany({
                 orderBy: { createdAt: 'desc' }
             });
 
-            console.log(`Found ${products.length} products with category 'トップス' in database`);
+            console.log(`Found ${products.length} products for export`);
 
-            // If no products with category トップス, get all products
             if (products.length === 0) {
-                console.log('No products with category トップス found, exporting all products...');
-                products = await prisma.product.findMany({
-                    orderBy: { createdAt: 'desc' }
-                });
+                console.log('No products found in database');
             }
 
             // Create a new workbook
             const workbook = new ExcelJS.Workbook();
 
-            // Create worksheet with the category name as tab name
-            const worksheet = workbook.addWorksheet('トップス');
+            // Create blank sheets first (except Sheet1)
+            const blankSheetNames = [
+                'CSV',
+                'ブランド一覧',
+                'csv2',
+                'main',
+                'コンディションランク',
+                '出品ID',
+                '金額レート'
+            ];
 
-            // Add header row manually
-            const headerRow = worksheet.addRow(['管理番号', '色', 'ランク', '金額']);
+            for (const sheetName of blankSheetNames) {
+                workbook.addWorksheet(sheetName);
+                console.log(`Created blank sheet: ${sheetName}`);
+            }
+
+            // Create Sheet1 with product data
+            const sheet1 = workbook.addWorksheet('Sheet1');
+
+            // Add header row
+            const headers = [
+                'カテゴリ', '管理番号', 'タイトル', '付属品', 'ラック', 'ランク', '型番', 'コメント',
+                '仕立て・収納', '素材', '色', 'サイズ', 'トップス', 'パンツ', 'スカート', 'ワンピース',
+                'スカートスーツ', 'パンツスーツ', '靴', 'ブーツ', 'スニーカー', 'ベルト', 'ネクタイ縦横',
+                '帽子', 'バッグ', 'ネックレス', 'サングラス', 'あまり', '出品日', '出品URL', '原価',
+                '売値', '梱包サイズ', '仕入先', '仕入日', 'ID', 'ブランド', 'シリーズ名', '原産国'
+            ];
+
+            const headerRow = sheet1.addRow(headers);
             headerRow.font = { bold: true };
             headerRow.fill = {
                 type: 'pattern',
@@ -562,81 +579,107 @@ export class ProductService {
             };
             headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
-            // Set column widths
-            worksheet.getColumn(1).width = 20; // 管理番号
-            worksheet.getColumn(2).width = 50; // 色 (生成結果)
-            worksheet.getColumn(3).width = 15; // ランク
-            worksheet.getColumn(4).width = 15; // 金額
+            // Helper function to get condition description
+            const getConditionDescription = (condition: string | null): string => {
+                if (!condition) return '';
+                const conditionMap: { [key: string]: string } = {
+                    '1': '新品',
+                    '2': '未使用に近い',
+                    '3': '目立った傷や汚れなし',
+                    '4': 'やや傷や汚れあり',
+                    '5': '傷や汚れあり',
+                    '6': '全体的に状態が悪い'
+                };
+                return conditionMap[condition] || '';
+            };
 
+            // Add product data rows
+            let rowCount = 0;
             for (const product of products) {
-                const generationResult = product.title || '';
-                const rank = product.condition || '';
-                const price = product.price !== null && product.price !== undefined ? product.price : '';
+                try {
+                    // Parse measurementType for overseas size
+                    let foreignSize = '';
+                    try {
+                        if (product.measurementType) {
+                            const measurementType = JSON.parse(product.measurementType as string);
+                            foreignSize = measurementType.foreign || '';
+                        }
+                    } catch (e) {
+                        console.log(`Error parsing measurementType for product ${product.managementNumber}:`, e);
+                    }
 
-                const row = worksheet.addRow([
-                    product.managementNumber || '',
-                    generationResult,
-                    rank,
-                    price
-                ]);
+                    // Format price with ¥ prefix
+                    const priceValue = product.price ? `¥${product.price}` : '¥0';
 
+                    // Type assertion for new fields
+                    const productAny = product as any;
+
+                    // const final_title = product.title
+
+                    // ◇ Θ ジェイダ GYDA × what it isn't コラボ長袖Tシャツ ホワイト系 レディース FREE E 1511250015045
+
+
+                    const row = [
+                        product.category || '',                                     // カテゴリ
+                        product.managementNumber || '',                             // 管理番号
+                        product.title || '',                                        // タイトル
+                        '無<br>採寸はAIが1cm各の格子背景で行っております。',      // 付属品
+                        'ベースW/K',                                                // ラック
+                        product.condition || '',                                    // ランク
+                        '',                                                         // 型番
+                        getConditionDescription(product.condition),                 // コメント
+                        '',                                                         // 仕立て・収納
+                        productAny.imageReference !== undefined && productAny.imageReference ? '有' : '無', // 素材
+                        product.title || '',                                        // 色
+                        foreignSize,                                                // サイズ
+                        '',                                                         // トップス
+                        '',                                                         // パンツ
+                        '',                                                         // スカート
+                        '',                                                         // ワンピース
+                        '',                                                         // スカートスーツ
+                        '',                                                         // パンツスーツ
+                        '',                                                         // 靴
+                        '',                                                         // ブーツ
+                        '',                                                         // スニーカー
+                        '',                                                         // ベルト
+                        '',                                                         // ネクタイ縦横
+                        '',                                                         // 帽子
+                        '',                                                         // バッグ
+                        '',                                                         // ネックレス
+                        '',                                                         // サングラス
+                        '',                                                         // あまり
+                        '',                                                         // 出品日
+                        '',                                                         // 出品URL
+                        '',                                                         // 原価
+                        priceValue,                                                 // 売値
+                        productAny.packagingSize || '通常',                         // 梱包サイズ
+                        '¥0',                                                       // 仕入先
+                        '0',                                                        // 仕入日
+                        '1',                                                        // ID
+                        '0',                                                        // ブランド
+                        '',                                                         // シリーズ名
+                        ''                                                          // 原産国
+                    ];
+
+                    sheet1.addRow(row);
+                    rowCount++;
+                } catch (error) {
+                    console.error(`Error processing product ${product.managementNumber}:`, error);
+                }
             }
 
-            console.log(`Total rows in worksheet: ${worksheet.rowCount} (including header)`);
+            console.log(`Added ${rowCount} products to Sheet1 (out of ${products.length} total)`);
 
             // Generate buffer for response
             const buffer = await workbook.xlsx.writeBuffer();
 
-            console.log(`Successfully exported ${products.length} products to Excel`);
+            console.log(`Successfully exported Excel file with product data`);
             console.log(`Buffer size: ${buffer.byteLength} bytes`);
             return buffer;
         } catch (error) {
             console.error('Error exporting products to Excel:', error);
             throw error;
         }
-    }
-
-    /**
-     * Extract color from product data (title, categoryList, etc.)
-     */
-    private extractColorFromProduct(product: any): string | null {
-        // Option 1: Extract from title if it contains color information
-        if (product.title) {
-            const colorKeywords = [
-                '赤', '青', '緑', '黒', '白', '黄', '紫', 'ピンク', 'オレンジ', 'グレー',
-                '茶', 'ベージュ', 'ネイビー', 'カーキ', 'ゴールド', 'シルバー', 'レッド', 'ブルー',
-                'グリーン', 'ブラック', 'ホワイト', 'イエロー', 'パープル', 'オレンジ', 'グレー'
-            ];
-            for (const color of colorKeywords) {
-                if (product.title.includes(color)) {
-                    return color;
-                }
-            }
-        }
-
-        // Option 2: Extract from categoryList
-        if (product.categoryList) {
-            try {
-                const categoryList = JSON.parse(product.categoryList);
-                const colorKeywords = [
-                    '赤', '青', '緑', '黒', '白', '黄', '紫', 'ピンク', 'オレンジ', 'グレー',
-                    '茶', 'ベージュ', 'ネイビー', 'カーキ', 'ゴールド', 'シルバー'
-                ];
-                for (const category of categoryList) {
-                    if (typeof category === 'string') {
-                        for (const color of colorKeywords) {
-                            if (category.includes(color)) {
-                                return color;
-                            }
-                        }
-                    }
-                }
-            } catch (e) {
-                // Ignore parsing errors
-            }
-        }
-
-        return null;
     }
 }
 

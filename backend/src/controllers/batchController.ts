@@ -825,7 +825,7 @@ class BatchController {
             console.log('buffer', buffer);
 
             // Set response headers for Excel file download
-            const filename = `トップス_products_${new Date().toISOString().split('T')[0]}.xlsx`;
+            const filename = `products_export_${new Date().toISOString().split('T')[0]}.xlsx`;
 
             res.setHeader(
                 'Content-Type',
