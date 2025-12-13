@@ -31,7 +31,7 @@ const BatchProcessingPage = () => {
         filesUploaded: 0,
         totalFiles: 0
     });
-    const [price, setPrice] = useState('');
+    const [price, setPrice] = useState(0);
     const fileInputRef = useRef(null);
     const progressIntervalRef = useRef(null);
 
@@ -311,7 +311,7 @@ const BatchProcessingPage = () => {
 
         } catch (error) {
             console.error('Error starting batch processing:', error);
-            
+
             // Provide more specific error messages
             let errorMessage = 'バッチ処理の開始に失敗しました';
             if (error.message) {
@@ -323,7 +323,7 @@ const BatchProcessingPage = () => {
                     errorMessage += ': ' + error.message;
                 }
             }
-            
+
             alert(errorMessage);
             setIsUploading(false);
             setGlobalUploading(false);
@@ -461,10 +461,10 @@ const BatchProcessingPage = () => {
                     {isProcessing && (
                         <div className="mb-8">
                             <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                                        <Activity className="w-5 h-5 text-purple-600" />
-                                        AI分析進行状況
-                                    </h2>
+                                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                                    <Activity className="w-5 h-5 text-purple-600" />
+                                    AI分析進行状況
+                                </h2>
                                 {currentSession?.workProcessId && (
                                     <button
                                         onClick={handleClearWorkProcess}
@@ -543,7 +543,7 @@ const BatchProcessingPage = () => {
                             <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                                 <User className="w-5 h-5 text-blue-600" />
                                 作業者選択
-                            </h2>                            
+                            </h2>
                         </div>
                         <div>
                             {usersLoading ? (
@@ -754,15 +754,15 @@ const BatchProcessingPage = () => {
                         </div>
                     )}
 
-                    {/* Start Batch Processing Button - Show when no active task */}
                     {!isWorking && (
                         <div className="text-center">
                             <button
                                 onClick={handleStartBatchProcessing}
-                                disabled={!canStartProcessing || usersLoading}
-                                className={`px-12 py-4 rounded-xl text-lg font-semibold shadow-lg transition-all duration-300 flex items-center gap-3 mx-auto ${!canStartProcessing || usersLoading
-                                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                                    : 'bg-purple-600 text-white hover:bg-purple-700 hover:shadow-xl'
+                                disabled={!canStartProcessing || usersLoading || !selectedUser || price <= 0}
+                                className={`px-12 py-4 rounded-xl text-lg font-semibold shadow-lg transition-all duration-300 flex items-center gap-3 mx-auto 
+                                    ${!canStartProcessing || usersLoading || price <= 0
+                                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                        : 'bg-purple-600 text-white hover:bg-purple-700 hover:shadow-xl'
                                     }`}
                             >
                                 {usersLoading ? (

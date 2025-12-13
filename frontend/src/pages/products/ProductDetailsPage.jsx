@@ -549,45 +549,49 @@ const ProductDetailsPage = () => {
                                 </div>
                             </div>
 
-                            {/* Category */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    カテゴリ
-                                </label>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="text"
-                                        value={formData.category}
-                                        onChange={(e) => handleInputChange('category', e.target.value)}
-                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="カテゴリコード"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowCategoryModal(true)}
-                                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center gap-3"
-                                        title="カテゴリを選択"
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* Category */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        カテゴリ
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            value={formData.category}
+                                            onChange={(e) => handleInputChange('category', e.target.value)}
+                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="カテゴリコード"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCategoryModal(true)}
+                                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center gap-3"
+                                            title="カテゴリを選択"
+                                        >
+                                            <FolderTree className="w-4 h-4" />
+                                            選択
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Material (素材) */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        素材
+                                    </label>
+                                    <select
+                                        value={formData.imageReference || ''}
+                                        onChange={(e) => handleInputChange('imageReference', e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     >
-                                        <FolderTree className="w-4 h-4" />
-                                        選択
-                                    </button>
+                                        <option value="画像参照">画像参照</option>
+                                        <option value="/ソール">/ソール</option>
+                                    </select>
                                 </div>
                             </div>
 
-                            {/* Material (素材) */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    素材
-                                </label>
-                                <select
-                                    value={formData.imageReference || ''}
-                                    onChange={(e) => handleInputChange('imageReference', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                >
-                                    <option value="画像参照">画像参照</option>
-                                    <option value="/ソール">/ソール</option>
-                                </select>
-                            </div>
+
 
                             {/* Marketplace IDs */}
                             <div className="grid grid-cols-3 gap-4">

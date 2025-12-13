@@ -546,7 +546,8 @@ export class ProductService {
 
             // Create blank sheets first (except Sheet1)
             const blankSheetNames = [
-                'CSV',
+                'csv',
+                'category',
                 'ブランド一覧',
                 'csv2',
                 'main',
@@ -608,9 +609,9 @@ export class ProductService {
                         console.log(`Error parsing measurementType for product ${product.managementNumber}:`, e);
                     }
 
-                    const priceValue = product.price ? `¥${product.price}` : '¥0';
+                    const priceValue = product.price ? `${product.price}` : '0';
                     const productAny = product as any;
-                    const final_title = `${productAny.season} ${product.title} E ${product.managementNumber}` || '';
+                    const final_title = `◇ ${productAny.season} ${product.title} E ${product.managementNumber}` || '';
                     const baseIndex = [
                         "カテゴリ", "管理番号", "タイトル", "属品", "ラック", "ランク", "型番", "コメント", "仕立て・収納", "素材", "色",
                         "サイズ", "トップス", "パンツ", "スカート", "ワンピース", "スカートスー", "パンツスーツ", "靴", "ブーツ", "スニーカー", "ベルト",
@@ -656,7 +657,7 @@ export class ProductService {
                         '',                                                         // 原価
                         priceValue,                                                 // 売値
                         productAny.packagingSize || '通常',                         // 梱包サイズ
-                        '¥0',                                                       // 仕入先
+                        '0',                                                       // 仕入先
                         '0',                                                        // 仕入日
                         '1',                                                        // ID
                         '0',                                                        // ブランド
@@ -710,7 +711,7 @@ export class ProductService {
                 }
             }
 
-            while (rowCount < 820) {
+            while (rowCount < 819) {
                 try {
                     const row = [
                         '',                                     // カテゴリ
