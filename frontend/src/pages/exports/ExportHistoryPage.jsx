@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Download, History, User, Calendar, Trash2 } from 'lucide-react';
+import { Download, History, User, Calendar, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getExportHistory, deleteExportHistory } from '../../api/batchApi';
 import { BACKEND_URL } from '../../api/config';
@@ -9,6 +9,8 @@ const ExportHistoryPage = () => {
     const navigate = useNavigate();
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [sortField, setSortField] = useState(null); // 'user' or 'date'
+    const [sortDirection, setSortDirection] = useState('desc'); // 'asc' or 'desc'
 
     const loadHistory = async () => {
         try {
@@ -37,12 +39,45 @@ const ExportHistoryPage = () => {
         }
     };
 
+    const handleSort = (field) => {
+        if (sortField === field) {
+            // Toggle direction if same field
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            // Set new field and default to desc for date, asc for user
+            setSortField(field);
+            setSortDirection(field === 'date' ? 'desc' : 'asc');
+        }
+    };
+
+    const sortedHistory = useMemo(() => {
+        if (!sortField) return history;
+
+        const sorted = [...history].sort((a, b) => {
+            let comparison = 0;
+
+            if (sortField === 'user') {
+                const userA = (a.user?.username || '不明').toLowerCase();
+                const userB = (b.user?.username || '不明').toLowerCase();
+                comparison = userA.localeCompare(userB);
+            } else if (sortField === 'date') {
+                const dateA = new Date(a.createdAt).getTime();
+                const dateB = new Date(b.createdAt).getTime();
+                comparison = dateA - dateB;
+            }
+
+            return sortDirection === 'asc' ? comparison : -comparison;
+        });
+
+        return sorted;
+    }, [history, sortField, sortDirection]);
+
     useEffect(() => {
         loadHistory();
     }, []);
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
+        <div className="bg-gray-50 p-6">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <motion.div
@@ -88,13 +123,36 @@ const ExportHistoryPage = () => {
                                 <thead className="bg-gray-100 border-b border-gray-200">
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                                            ユーザー
+                                            番号
+                                        </th>
+                                        <th
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
+                                            onClick={() => handleSort('user')}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                ユーザー
+                                                {sortField === 'user' && (
+                                                    sortDirection === 'asc' ?
+                                                        <ChevronUp size={16} className="text-blue-600" /> :
+                                                        <ChevronDown size={16} className="text-blue-600" />
+                                                )}
+                                            </div>
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                                             ファイル名
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                                            エクスポート日時
+                                        <th
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
+                                            onClick={() => handleSort('date')}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                エクスポート日時
+                                                {sortField === 'date' && (
+                                                    sortDirection === 'asc' ?
+                                                        <ChevronUp size={16} className="text-blue-600" /> :
+                                                        <ChevronDown size={16} className="text-blue-600" />
+                                                )}
+                                            </div>
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                                             操作
@@ -102,13 +160,18 @@ const ExportHistoryPage = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {history.map((item) => (
+                                    {sortedHistory.map((item, index) => (
                                         <motion.tr
                                             key={item.id}
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
                                             className="hover:bg-gray-50 transition-colors duration-150"
                                         >
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className="text-sm font-medium text-gray-900">
+                                                    {index + 1}
+                                                </span>
+                                            </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-2">
                                                     <User size={16} className="text-gray-400" />

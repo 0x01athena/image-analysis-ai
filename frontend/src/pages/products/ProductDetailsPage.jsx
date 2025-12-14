@@ -263,7 +263,7 @@ const ProductDetailsPage = () => {
                             {images.length > 0 ? (
                                 <div className="space-y-4">
                                     {/* Main Image Display */}
-                                    <div className="relative h-96 bg-gray-100 rounded-lg overflow-hidden">
+                                    <div className="relative h-100 bg-gray-100 rounded-lg overflow-hidden">
                                         <img
                                             src={`/public/images/${images[currentImageIndex]}`}
                                             alt={`Product ${currentImageIndex + 1}`}
@@ -555,18 +555,18 @@ const ProductDetailsPage = () => {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         カテゴリ
                                     </label>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 justify-between">
                                         <input
                                             type="text"
                                             value={formData.category}
                                             onChange={(e) => handleInputChange('category', e.target.value)}
-                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent max"
                                             placeholder="カテゴリコード"
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowCategoryModal(true)}
-                                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center gap-3"
+                                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center gap-3 w-full"
                                             title="カテゴリを選択"
                                         >
                                             <FolderTree className="w-4 h-4" />
