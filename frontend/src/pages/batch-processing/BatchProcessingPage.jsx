@@ -763,9 +763,9 @@ const BatchProcessingPage = () => {
                         <div className="text-center">
                             <button
                                 onClick={handleStartBatchProcessing}
-                                disabled={!canStartProcessing || usersLoading || !selectedUser || price <= 0}
+                                disabled={!canStartProcessing || usersLoading || !selectedUser}
                                 className={`px-12 py-4 rounded-xl text-lg font-semibold shadow-lg transition-all duration-300 flex items-center gap-3 mx-auto 
-                                    ${!canStartProcessing || usersLoading || price <= 0
+                                    ${!canStartProcessing || usersLoading || !selectedUser
                                         ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                                         : 'bg-purple-600 text-white hover:bg-purple-700 hover:shadow-xl'
                                     }`}
