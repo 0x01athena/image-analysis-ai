@@ -12,9 +12,15 @@ export const useUpload = () => {
 
 export const UploadProvider = ({ children }) => {
     const [isUploading, setIsUploading] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     return (
-        <UploadContext.Provider value={{ isUploading, setIsUploading }}>
+        <UploadContext.Provider value={{ 
+            isUploading, 
+            setIsUploading, 
+            isProcessing, 
+            setIsProcessing 
+        }}>
             {children}
         </UploadContext.Provider>
     );

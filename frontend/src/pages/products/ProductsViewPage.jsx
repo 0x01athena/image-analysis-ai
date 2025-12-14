@@ -33,14 +33,14 @@ const ProductsViewPage = () => {
         try {
             setLoading(true);
             const params = {
-                page: currentPage,
-                limit: pageSize,
-                ...(filters.rank && { rank: filters.rank }),
+                page: String(currentPage),
+                limit: String(pageSize),
+                ...(filters.rank && filters.rank.trim() && { rank: filters.rank.trim() }),
                 ...(filters.date && { date: filters.date }),
                 ...(filters.worker && { worker: filters.worker }),
                 ...(filters.category && { category: filters.category }),
                 ...(filters.condition && { condition: filters.condition }),
-                ...(filters.search && { search: filters.search })
+                ...(filters.search && filters.search.trim() && { search: filters.search.trim() })
             };
 
             const response = await getAllProducts(params);
@@ -128,6 +128,32 @@ const ProductsViewPage = () => {
             handlePageChange(value);
         }
     };
+
+    // Sync filters with URL params when they change
+    useEffect(() => {
+        const rankFromUrl = searchParams.get('rank') || '';
+        const dateFromUrl = searchParams.get('date') || '';
+        const searchFromUrl = searchParams.get('search') || '';
+        const workerFromUrl = searchParams.get('worker') || '';
+        const categoryFromUrl = searchParams.get('category') || '';
+        const conditionFromUrl = searchParams.get('condition') || '';
+
+        setFilters(prev => {
+            // Only update if values changed to avoid infinite loops
+            if (prev.rank !== rankFromUrl || prev.date !== dateFromUrl || prev.search !== searchFromUrl ||
+                prev.worker !== workerFromUrl || prev.category !== categoryFromUrl || prev.condition !== conditionFromUrl) {
+                return {
+                    rank: rankFromUrl,
+                    date: dateFromUrl,
+                    search: searchFromUrl,
+                    worker: workerFromUrl,
+                    category: categoryFromUrl,
+                    condition: conditionFromUrl
+                };
+            }
+            return prev;
+        });
+    }, [searchParams]);
 
     useEffect(() => {
         loadProducts();

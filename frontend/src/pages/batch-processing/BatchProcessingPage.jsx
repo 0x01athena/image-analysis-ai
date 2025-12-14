@@ -8,7 +8,7 @@ import { useUpload } from '../../contexts/UploadContext';
 import spinner from '../../assets/spinner.gif';
 
 const BatchProcessingPage = () => {
-    const { setIsUploading: setGlobalUploading } = useUpload();
+    const { setIsUploading: setGlobalUploading, setIsProcessing: setGlobalProcessing } = useUpload();
     const [directoryPath, setDirectoryPath] = useState('');
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [isWorking, setIsWorking] = useState(false);
@@ -104,6 +104,7 @@ const BatchProcessingPage = () => {
     // Handle task completion
     const handleTaskCompletion = () => {
         setIsProcessing(false);
+        setGlobalProcessing(false);
         setIsUploading(false);
         setIsWorking(false);
         setProcessCompleted(true);
@@ -158,6 +159,7 @@ const BatchProcessingPage = () => {
 
             // Reset processing states
             setIsProcessing(false);
+            setGlobalProcessing(false);
             setIsUploading(false);
             setIsWorking(false);
 
@@ -181,6 +183,7 @@ const BatchProcessingPage = () => {
         if (currentSession?.workProcessId) {
             // If there's an active session, start monitoring
             setIsProcessing(true);
+            setGlobalProcessing(true);
             setIsWorking(true);
             startProgressMonitoring();
         }
@@ -299,6 +302,7 @@ const BatchProcessingPage = () => {
                 setIsUploading(false);
                 setGlobalUploading(false);
                 setIsProcessing(true);
+                setGlobalProcessing(true);
 
                 // Start batch processing using API function with workProcessId
                 const processingResult = await startBatchProcessing(uploadResult.data.workProcessId);
@@ -328,6 +332,7 @@ const BatchProcessingPage = () => {
             setIsUploading(false);
             setGlobalUploading(false);
             setIsProcessing(false);
+            setGlobalProcessing(false);
             setIsWorking(false);
             setUploadProgress({ percentage: 0, filesUploaded: 0, totalFiles: 0 });
         }

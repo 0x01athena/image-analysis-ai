@@ -7,7 +7,10 @@ import { useUpload } from '../contexts/UploadContext';
 const Navigation = () => {
     const [isOpen, setIsOpen] = useState(false);
     const location = useLocation();
-    const { isUploading } = useUpload();
+    const { isUploading, isProcessing } = useUpload();
+    
+    // Disable navigation during upload or processing
+    const isNavigationDisabled = isUploading || isProcessing;
 
     const navItems = [
         { path: '/batch-processing', label: '一括処理', icon: FileText },
@@ -32,11 +35,11 @@ const Navigation = () => {
                     <Link
                         to="/"
                         onClick={(e) => {
-                            if (isUploading) {
+                            if (isNavigationDisabled) {
                                 e.preventDefault();
                             }
                         }}
-                        className={`flex items-center space-x-2 ${isUploading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+                        className={`flex items-center space-x-2 ${isNavigationDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
                     >
                         <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                             <span className="text-white font-bold text-lg">AI</span>
@@ -53,14 +56,14 @@ const Navigation = () => {
                                     key={item.path}
                                     to={item.path}
                                     onClick={(e) => {
-                                        if (isUploading) {
+                                        if (isNavigationDisabled) {
                                             e.preventDefault();
                                         }
                                     }}
                                     className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors duration-300 ${isActive(item.path)
                                         ? 'bg-blue-100 text-blue-600'
                                         : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'
-                                        } ${isUploading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+                                        } ${isNavigationDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
                                 >
                                     <Icon className="w-6 h-6" />
                                     <span className="font-medium text-xl">{item.label}</span>
@@ -95,7 +98,7 @@ const Navigation = () => {
                                         key={item.path}
                                         to={item.path}
                                         onClick={(e) => {
-                                            if (isUploading) {
+                                            if (isNavigationDisabled) {
                                                 e.preventDefault();
                                             } else {
                                                 setIsOpen(false);
@@ -104,7 +107,7 @@ const Navigation = () => {
                                         className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-300 ${isActive(item.path)
                                             ? 'bg-blue-100 text-blue-600'
                                             : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'
-                                            } ${isUploading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+                                            } ${isNavigationDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
                                     >
                                         <Icon className="w-5 h-5" />
                                         <span className="font-medium">{item.label}</span>

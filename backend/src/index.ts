@@ -12,9 +12,9 @@ import { openAIService } from './services/OpenAIService';
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT || '5000', 10);
 console.log(process.env.OPENAI_API_KEY, 'OPENAI_API_KEY');
-console.log(process.env.PORT, 'PORT');
+console.log(process.env.CORS_ORIGIN, 'CORS_ORIGIN');
 
 // Swagger configuration
 const swaggerOptions = {
@@ -57,10 +57,31 @@ const specs = swaggerJsdoc(swaggerOptions);
 
 // Middleware
 app.use(helmet());
-app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+const corsOptions = {
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        // Allow requests with no origin (like mobile apps, Postman, etc.)
+        if (!origin) return callback(null, true);
+
+        // Get allowed origins from environment variable (comma-separated)
+        const allowedOrigins = process.env.CORS_ORIGIN
+            ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+            : ['http://localhost:5173'];
+
+        // Check if origin is in allowed list
+        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+            callback(null, true);
+        } else {
+            // In development, be more permissive
+            if (process.env.NODE_ENV === 'development') {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        }
+    },
     credentials: true,
-}));
+};
+app.use(cors(corsOptions));
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -119,11 +140,11 @@ app.use((req, res) => {
     });
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📚 API Documentation available at http://localhost:${PORT}/api-docs`);
-    console.log(`🏥 Health check available at http://localhost:${PORT}/health`);
+const HOST = process.env.HOST || '0.0.0.0';
+app.listen(PORT, HOST, () => {
+    console.log(`🚀 Server running on ${HOST}:${PORT}`);
+    console.log(`📚 API Documentation available at http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}/api-docs`);
+    console.log(`🏥 Health check available at http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}/health`);
 });
 
 export default app;

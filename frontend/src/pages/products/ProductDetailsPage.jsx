@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Save, Trash2, X, ChevronLeft, ChevronRight, FolderTree } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -12,6 +12,7 @@ const ProductDetailsPage = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [formData, setFormData] = useState({});
+    const [originalFormData, setOriginalFormData] = useState({});
     const [images, setImages] = useState([]);
     const [allProducts, setAllProducts] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -20,6 +21,7 @@ const ProductDetailsPage = () => {
     const [showTitleSelector, setShowTitleSelector] = useState(false);
     const [showImageModal, setShowImageModal] = useState(false);
     const [showCategoryModal, setShowCategoryModal] = useState(false);
+    const [allowNavigation, setAllowNavigation] = useState(false);
 
     const loadProduct = async () => {
         try {
@@ -40,7 +42,7 @@ const ProductDetailsPage = () => {
             const measurementTypeData = productData.measurementType ? JSON.parse(productData.measurementType) : { foreign: '', japanese: '' };
 
             // Initialize form data
-            setFormData({
+            const initialFormData = {
                 title: productData.title || '',
                 level: productData.level || '',
                 measurement: productData.measurement || '',
@@ -55,7 +57,10 @@ const ProductDetailsPage = () => {
                 imageReference: productData.imageReference || '画像参照',
                 packagingSize: productData.packagingSize || '通常',
                 season: productData.season || 'Θ'
-            });
+            };
+            setFormData(initialFormData);
+            setOriginalFormData(JSON.parse(JSON.stringify(initialFormData)));
+            setAllowNavigation(false);
         } catch (error) {
             console.error('Error loading product:', error);
             alert('商品の読み込みに失敗しました: ' + error.message);
@@ -83,6 +88,28 @@ const ProductDetailsPage = () => {
         loadAllProducts();
     }, [managementNumber]);
 
+    // Check if there are unsaved changes
+    const hasUnsavedChanges = useMemo(() => {
+        return JSON.stringify(formData) !== JSON.stringify(originalFormData);
+    }, [formData, originalFormData]);
+
+    // Handle browser tab/window close with unsaved changes
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = '保存されていない変更があります。このページを離れると変更が失われます。';
+                return e.returnValue;
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [hasUnsavedChanges]);
+
     const handleSave = async () => {
         try {
             setSaving(true);
@@ -93,7 +120,7 @@ const ProductDetailsPage = () => {
                 measurementType: formData.measurementType ? JSON.stringify(formData.measurementType) : null
             };
             await updateProduct(managementNumber, saveData);
-            await loadProduct();
+            await loadProduct(); // This will reset originalFormData and allowNavigation
             alert('商品情報を保存しました');
         } catch (error) {
             console.error('Error saving product:', error);
@@ -106,6 +133,7 @@ const ProductDetailsPage = () => {
     const handleDelete = async () => {
         if (confirm('この商品を削除しますか？')) {
             try {
+                setAllowNavigation(true);
                 await deleteProduct(managementNumber);
                 alert('商品を削除しました');
                 navigate('/products');
@@ -113,6 +141,41 @@ const ProductDetailsPage = () => {
                 console.error('Error deleting product:', error);
                 alert('削除に失敗しました: ' + error.message);
             }
+        }
+    };
+
+    // Save and navigate
+    const saveAndNavigate = async (targetPath, callback) => {
+        try {
+            setSaving(true);
+            const saveData = {
+                ...formData,
+                price: formData.price && formData.price !== '' ? parseFloat(formData.price) : null,
+                measurementType: formData.measurementType ? JSON.stringify(formData.measurementType) : null
+            };
+            await updateProduct(managementNumber, saveData);
+            await loadProduct(); // This will reset originalFormData and allowNavigation
+            setAllowNavigation(true);
+            if (callback) callback();
+            else navigate(targetPath);
+        } catch (error) {
+            console.error('Error saving product:', error);
+            alert('保存に失敗しました: ' + error.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Handle navigation with unsaved changes check
+    const handleNavigation = (targetPath, callback) => {
+        if (hasUnsavedChanges && !allowNavigation) {
+            const shouldSave = window.confirm('保存されていない変更があります。\n\n変更を保存してからこのページを離れますか？\n\nOK: 保存して移動\nキャンセル: このページに留まる');
+            if (shouldSave) {
+                saveAndNavigate(targetPath, callback);
+            }
+        } else {
+            if (callback) callback();
+            else navigate(targetPath);
         }
     };
 
@@ -133,7 +196,7 @@ const ProductDetailsPage = () => {
             const nextProduct = sameDate[nextIndex];
 
             if (nextProduct && nextProduct.managementNumber !== managementNumber) {
-                navigate(`/products/${nextProduct.managementNumber}`);
+                handleNavigation(`/products/${nextProduct.managementNumber}`);
             }
         }
     };
@@ -193,7 +256,7 @@ const ProductDetailsPage = () => {
                 <div className="text-center">
                     <p className="text-gray-600">商品が見つかりません</p>
                     <button
-                        onClick={() => navigate('/products')}
+                        onClick={() => handleNavigation('/products')}
                         className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300"
                     >
                         戻る
@@ -216,7 +279,7 @@ const ProductDetailsPage = () => {
                     <div className="mb-6 flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <button
-                                onClick={() => navigate('/products')}
+                                onClick={() => handleNavigation('/products')}
                                 className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-300"
                             >
                                 <ArrowLeft className="w-5 h-5" />
@@ -560,7 +623,7 @@ const ProductDetailsPage = () => {
                                             type="text"
                                             value={formData.category}
                                             onChange={(e) => handleInputChange('category', e.target.value)}
-                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent max"
+                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent max-w-40"
                                             placeholder="カテゴリコード"
                                         />
                                         <button
