@@ -690,7 +690,7 @@ export class ProductService {
                     if (row[24] === '') error = `${headers[24]}が空です。`;
                     if (row[25] === '') error = `${headers[25]}が空です。`;
                     if (row[26] === '') error = `${headers[26]}が空です。`;
-                    if (row[31] === '') error = `${headers[31]}が空です。`;
+                    if (row[31] === '' || row[31] === '0') error = `${headers[31]}が空です。`;
                     if (row[32] === '') error = `${headers[32]}が空です。`;
                     if (row[33] === '') error = `${headers[33]}が空です。`;
                     if (row[34] === '') error = `${headers[34]}が空です。`;
