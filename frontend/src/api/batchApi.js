@@ -3,15 +3,19 @@ import { API_BASE_URL } from './config.js';
 /**
  * Upload images from directory
  * @param {FileList} files - Array of image files
- * @returns {Promise<Object>} Upload result
  * @param {string} userId - User ID
+ * @param {string} folderName - Optional folder name
+ * @returns {Promise<Object>} Upload result
  */
-export const uploadDirectoryImages = async (files, userId) => {
+export const uploadDirectoryImages = async (files, userId, folderName = null) => {
     const formData = new FormData();
     Array.from(files).forEach(file => {
         formData.append('images', file);
     });
     formData.append('userId', userId);
+    if (folderName && folderName.trim()) {
+        formData.append('folderName', folderName.trim());
+    }
 
     const response = await fetch(`${API_BASE_URL}/batch/upload-directory`, {
         method: 'POST',
@@ -292,13 +296,24 @@ export const deleteMultipleProducts = async (managementNumbers) => {
 
 /**
  * Export updated Excel file with 管理番号 and 色 columns updated
+ * @param {Object} filters - Optional filter parameters (rank, date, worker, category, condition, search, folderId)
  * @returns {Promise<Object>} Export result
  */
-export const exportExcelFile = async () => {
+export const exportExcelFile = async (filters = {}) => {
     try {
         const userId = JSON.parse(localStorage.getItem('selectedUser')).id;
 
-        const response = await fetch(`${API_BASE_URL}/batch/excel/export?userId=${userId}`, {
+        // Build query string with userId and filters
+        const params = new URLSearchParams({ userId });
+        if (filters.rank) params.append('rank', filters.rank);
+        if (filters.date) params.append('date', filters.date);
+        if (filters.worker) params.append('worker', filters.worker);
+        if (filters.category) params.append('category', filters.category);
+        if (filters.condition) params.append('condition', filters.condition);
+        if (filters.search) params.append('search', filters.search);
+        if (filters.folderId) params.append('folderId', filters.folderId);
+
+        const response = await fetch(`${API_BASE_URL}/batch/excel/export?${params.toString()}`, {
             method: 'GET',
         });
 
@@ -404,4 +419,71 @@ export const deleteExportHistory = async (id) => {
         console.error('Error deleting export history:', error);
         throw error;
     }
+};
+
+/**
+ * Get all folders
+ * @returns {Promise<Object>} Folders list
+ */
+export const getAllFolders = async () => {
+    const response = await fetch(`${API_BASE_URL}/batch/folders`, {
+        method: 'GET',
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to get folders: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
+/**
+ * Get folders by user ID
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} Folders list
+ */
+export const getFoldersByUser = async (userId) => {
+    const response = await fetch(`${API_BASE_URL}/batch/folders/user/${userId}`, {
+        method: 'GET',
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to get folders: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
+/**
+ * Get folder by ID
+ * @param {string} id - Folder ID
+ * @returns {Promise<Object>} Folder data
+ */
+export const getFolderById = async (id) => {
+    const response = await fetch(`${API_BASE_URL}/batch/folders/${id}`, {
+        method: 'GET',
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to get folder: ${response.statusText}`);
+    }
+
+    return response.json();
+};
+
+/**
+ * Delete folder
+ * @param {string} id - Folder ID
+ * @returns {Promise<Object>} Delete result
+ */
+export const deleteFolder = async (id) => {
+    const response = await fetch(`${API_BASE_URL}/batch/folders/${id}`, {
+        method: 'DELETE',
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to delete folder: ${response.statusText}`);
+    }
+
+    return response.json();
 };

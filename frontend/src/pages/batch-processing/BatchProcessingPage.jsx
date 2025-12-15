@@ -280,8 +280,8 @@ const BatchProcessingPage = () => {
         setUploadProgress({ percentage: 0, filesUploaded: 0, totalFiles: selectedFiles.length });
 
         try {
-            // Upload with progress tracking
-            const uploadResult = await uploadWithProgress(selectedFiles, userId, price);
+            // Upload with progress tracking - pass folder name from directoryPath
+            const uploadResult = await uploadWithProgress(selectedFiles, userId, price, directoryPath);
             console.log('Upload result:', uploadResult);
 
             if (uploadResult.success) {
@@ -339,7 +339,7 @@ const BatchProcessingPage = () => {
     };
 
     // Upload with progress tracking using XMLHttpRequest
-    const uploadWithProgress = (files, userId, priceValue) => {
+    const uploadWithProgress = (files, userId, priceValue, folderName) => {
         return new Promise((resolve, reject) => {
             // Validate userId before proceeding
             if (!userId || typeof userId !== 'string') {
@@ -356,6 +356,10 @@ const BatchProcessingPage = () => {
             formData.append('userId', userId);
             if (priceValue && priceValue !== '') {
                 formData.append('price', priceValue);
+            }
+            // Add folder name if provided
+            if (folderName && folderName.trim()) {
+                formData.append('folderName', folderName.trim());
             }
 
             xhr.upload.addEventListener('progress', (e) => {

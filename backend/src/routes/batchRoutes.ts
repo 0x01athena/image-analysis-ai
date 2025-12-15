@@ -618,4 +618,86 @@ router.get('/excel/history/:userId', batchController.getExportHistoryByUser);
  */
 router.delete('/excel/history/:id', batchController.deleteExportHistory);
 
+/**
+ * @swagger
+ * /api/batch/folders:
+ *   get:
+ *     summary: Get all folders
+ *     tags: [Folders]
+ *     responses:
+ *       200:
+ *         description: Folders retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/folders', batchController.getAllFolders);
+
+/**
+ * @swagger
+ * /api/batch/folders/{userId}:
+ *   get:
+ *     summary: Get folders by user ID
+ *     tags: [Folders]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Folders retrieved successfully
+ *       400:
+ *         description: User ID required
+ *       500:
+ *         description: Server error
+ */
+router.get('/folders/user/:userId', batchController.getFoldersByUser);
+
+/**
+ * @swagger
+ * /api/batch/folders/{id}:
+ *   get:
+ *     summary: Get folder by ID
+ *     tags: [Folders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Folder retrieved successfully
+ *       400:
+ *         description: Folder ID required
+ *       404:
+ *         description: Folder not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/folders/:id', batchController.getFolderById);
+
+/**
+ * @swagger
+ * /api/batch/folders/{id}:
+ *   delete:
+ *     summary: Delete folder
+ *     tags: [Folders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Folder deleted successfully
+ *       400:
+ *         description: Folder ID required
+ *       500:
+ *         description: Server error
+ */
+router.delete('/folders/:id', batchController.deleteFolder);
+
 export default router;

@@ -34,11 +34,13 @@ model Product {
   packagingSize    String   @default("通常") // 梱包サイズ
   season           String?  // シーズン (春夏:⊂, 秋冬:⊇, 通年:Θ)
   userId           String?  // User who processed this product
+  folderId         String?  // Folder this product belongs to
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   
   // Relations
   user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  folder          Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
   
   @@map("products")
 }
@@ -53,6 +55,7 @@ model User {
   workProcesses WorkProcess[]
   products      Product[]
   excelExports  ExcelExportHistory[]
+  folders       Folder[]
   
   @@map("users")
 }
@@ -99,4 +102,21 @@ model ExcelExportHistory {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@map("excel_export_history")
+}
+
+model Folder {
+  id                      String   @id @default(cuid())
+  userId                  String
+  foldername              String
+  numberOfUploadedProducts Int      @default(0)
+  excelFileName           String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  
+  // Relations
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products                Product[]
+  
+  @@unique([userId, foldername])
+  @@map("folders")
 }

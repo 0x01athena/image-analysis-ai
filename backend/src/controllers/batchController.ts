@@ -5,6 +5,7 @@ import { workProcessService } from '../services/WorkProcessService';
 import { userService } from '../services/UserService';
 import { categoryService } from '../services/CategoryService';
 import { excelExportHistoryService } from '../services/ExcelExportHistoryService';
+import { folderService } from '../services/FolderService';
 
 
 
@@ -84,12 +85,9 @@ class BatchController {
             // Get upload summary before saving
             const uploadSummary = await productService.getUploadSummary(productImages);
 
-            // Get price and userId from request body
-            const { userId, price } = req.body;
+            // Get price, userId, and folderName from request body
+            const { userId, price, folderName } = req.body;
             const priceValue = price !== undefined && price !== null ? parseFloat(price as string) : null;
-
-            // Save products to database
-            const savedProducts = await productService.saveProductsFromImages(productImages, priceValue);
 
             // Validate user ID
             if (!userId) {
@@ -108,6 +106,24 @@ class BatchController {
                     message: 'User not found'
                 });
                 return;
+            }
+
+            // Create or get folder if folderName is provided
+            let folderId: string | null = null;
+            if (folderName && folderName.trim()) {
+                const folder = await folderService.createOrGetFolder({
+                    userId,
+                    foldername: folderName.trim()
+                });
+                folderId = folder.id;
+            }
+
+            // Save products to database with folderId
+            const savedProducts = await productService.saveProductsFromImages(productImages, priceValue, folderId);
+
+            // Update folder product count if folder exists
+            if (folderId) {
+                await folderService.updateProductCount(folderId);
             }
 
             // Create work process record
@@ -350,9 +366,9 @@ class BatchController {
      */
     getAllProducts = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { page = 1, limit = 50, rank, date, worker, category, condition, search } = req.query;
+            const { page = 1, limit = 50, rank, date, worker, category, condition, search, folderId } = req.query;
 
-            const products = await productService.getAllProducts();
+            let products = await productService.getAllProducts();
 
             // Apply filters
             let filteredProducts = products;
@@ -362,10 +378,18 @@ class BatchController {
             }
 
             if (date) {
-                const targetDate = new Date(date as string);
+                // Parse the date string (YYYY-MM-DD) and compare date components directly
+                // This avoids timezone issues when comparing dates
+                const targetDateParts = (date as string).split('-');
+                const targetYear = parseInt(targetDateParts[0]);
+                const targetMonth = parseInt(targetDateParts[1]) - 1; // Month is 0-indexed
+                const targetDay = parseInt(targetDateParts[2]);
+                
                 filteredProducts = filteredProducts.filter((p: any) => {
                     const productDate = new Date(p.createdAt);
-                    return productDate.toDateString() === targetDate.toDateString();
+                    return productDate.getFullYear() === targetYear &&
+                           productDate.getMonth() === targetMonth &&
+                           productDate.getDate() === targetDay;
                 });
             }
 
@@ -394,6 +418,12 @@ class BatchController {
                     p.managementNumber.toLowerCase().includes(searchTerm) ||
                     p.category?.toLowerCase().includes(searchTerm) ||
                     p.condition?.toLowerCase().includes(searchTerm)
+                );
+            }
+
+            if (folderId) {
+                filteredProducts = filteredProducts.filter((p: any) =>
+                    p.folderId === folderId
                 );
             }
 
@@ -854,11 +884,40 @@ class BatchController {
                 return;
             }
 
-            // Generate new Excel file
-            const buffer = await productService.exportProductsToExcel();
+            // Get filter parameters from query
+            const { rank, date, worker, category, condition, search, folderId } = req.query;
+
+            // Build filters object
+            const filters: {
+                rank?: string;
+                date?: string;
+                worker?: string;
+                category?: string;
+                condition?: string;
+                search?: string;
+                folderId?: string;
+            } = {};
+
+            if (rank) filters.rank = rank as string;
+            if (date) filters.date = date as string;
+            if (worker) filters.worker = worker as string;
+            if (category) filters.category = category as string;
+            if (condition) filters.condition = condition as string;
+            if (search) filters.search = search as string;
+            if (folderId) filters.folderId = folderId as string;
+
+            // Generate new Excel file with products filtered by userId and additional filters
+            const buffer = await productService.exportProductsToExcel(userId, Object.keys(filters).length > 0 ? filters : undefined);
 
             // Save file and create history record
             const history = await excelExportHistoryService.saveExportHistory(userId, buffer);
+
+            // Update folder's excelFileName if folderId is provided
+            if (filters.folderId) {
+                await folderService.updateFolder(filters.folderId, {
+                    excelFileName: history.fileName
+                });
+            }
 
             res.setHeader(
                 'Content-Type',
@@ -954,6 +1013,121 @@ class BatchController {
             res.status(500).json({
                 success: false,
                 message: 'Failed to delete export history',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Get all folders
+     */
+    getAllFolders = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const folders = await folderService.getAllFolders();
+            res.status(200).json({
+                success: true,
+                data: folders
+            });
+        } catch (error) {
+            console.error('Error getting all folders:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get folders',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Get folders by user ID
+     */
+    getFoldersByUser = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { userId } = req.params;
+            if (!userId) {
+                res.status(400).json({
+                    success: false,
+                    message: 'User ID is required'
+                });
+                return;
+            }
+
+            const folders = await folderService.getFoldersByUser(userId);
+            res.status(200).json({
+                success: true,
+                data: folders
+            });
+        } catch (error) {
+            console.error('Error getting folders by user:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get folders',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Get folder by ID
+     */
+    getFolderById = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { id } = req.params;
+            if (!id) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Folder ID is required'
+                });
+                return;
+            }
+
+            const folder = await folderService.getFolderById(id);
+            if (!folder) {
+                res.status(404).json({
+                    success: false,
+                    message: 'Folder not found'
+                });
+                return;
+            }
+
+            res.status(200).json({
+                success: true,
+                data: folder
+            });
+        } catch (error) {
+            console.error('Error getting folder:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get folder',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    };
+
+    /**
+     * Delete folder
+     */
+    deleteFolder = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { id } = req.params;
+            if (!id) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Folder ID is required'
+                });
+                return;
+            }
+
+            await folderService.deleteFolder(id);
+            res.status(200).json({
+                success: true,
+                message: 'Folder deleted successfully'
+            });
+        } catch (error) {
+            console.error('Error deleting folder:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to delete folder',
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
         }

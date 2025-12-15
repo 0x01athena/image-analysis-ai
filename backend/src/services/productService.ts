@@ -34,8 +34,11 @@ export interface ProductData {
 export class ProductService {
     /**
      * Save products to database from product images mapping with duplicate detection
+     * @param productImages - Mapping of management numbers to image arrays
+     * @param price - Optional price to set for products
+     * @param folderId - Optional folder ID to link products to
      */
-    async saveProductsFromImages(productImages: ProductImages, price?: number | null): Promise<any[]> {
+    async saveProductsFromImages(productImages: ProductImages, price?: number | null, folderId?: string | null): Promise<any[]> {
         const savedProducts = [];
 
         for (const [managementNumber, newImages] of Object.entries(productImages)) {
@@ -66,10 +69,16 @@ export class ProductService {
                         updateData.price = price;
                     }
 
+                    // Update folderId if provided and product doesn't have one
+                    if (folderId && !existingProduct.folderId) {
+                        updateData.folderId = folderId;
+                    }
+
                     // Only update if there are actual changes
                     if (mergedImages.length !== existingImages.length ||
                         !this.arraysEqual(mergedImages, existingImages) ||
-                        (price !== undefined && price !== null && existingProduct.price !== price)) {
+                        (price !== undefined && price !== null && existingProduct.price !== price) ||
+                        (folderId && !existingProduct.folderId)) {
 
                         const updatedProduct = await prisma.product.update({
                             where: { managementNumber },
@@ -98,7 +107,8 @@ export class ProductService {
                             shop1: null,
                             shop2: null,
                             shop3: null,
-                            price: price !== undefined && price !== null ? price : null
+                            price: price !== undefined && price !== null ? price : null,
+                            folderId: folderId || null
                         }
                     });
                     savedProducts.push(newProduct);
@@ -247,7 +257,8 @@ export class ProductService {
         try {
             return await prisma.product.findMany({
                 include: {
-                    user: true
+                    user: true,
+                    folder: true
                 },
                 orderBy: { createdAt: 'desc' }
             });
@@ -527,15 +538,96 @@ export class ProductService {
 
     /**
      * Export products to new Excel file - creates multiple sheets as specified
+     * @param userId - Optional user ID to filter products by the user who uploaded them
+     * @param filters - Optional filter parameters (rank, date, worker, category, condition, search, folderId)
      */
-    async exportProductsToExcel(): Promise<Buffer | ArrayBuffer> {
+    async exportProductsToExcel(userId?: string, filters?: {
+        rank?: string;
+        date?: string;
+        worker?: string;
+        category?: string;
+        condition?: string;
+        search?: string;
+        folderId?: string;
+    }): Promise<Buffer | ArrayBuffer> {
         try {
-            // Get all products from database
-            const products = await prisma.product.findMany({
+            // Build where clause
+            const whereClause: any = {};
+            if (userId) {
+                whereClause.userId = userId;
+            }
+            if (filters?.folderId) {
+                whereClause.folderId = filters.folderId;
+            }
+
+            // Get products from database with user relation, filtered by userId and folderId if provided
+            let products = await prisma.product.findMany({
+                where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
+                include: {
+                    user: true,
+                    folder: true
+                },
                 orderBy: { createdAt: 'desc' }
             });
 
-            console.log(`Found ${products.length} products for export`);
+            // Apply filters if provided
+            if (filters) {
+                let filteredProducts = products;
+
+                if (filters.rank) {
+                    filteredProducts = filteredProducts.filter((p: any) => p.level === filters.rank);
+                }
+
+                if (filters.date) {
+                    const targetDate = new Date(filters.date);
+                    filteredProducts = filteredProducts.filter((p: any) => {
+                        const productDate = new Date(p.createdAt);
+                        return productDate.toDateString() === targetDate.toDateString();
+                    });
+                }
+
+                if (filters.worker) {
+                    filteredProducts = filteredProducts.filter((p: any) =>
+                        p.user?.username === filters.worker
+                    );
+                }
+
+                if (filters.category) {
+                    filteredProducts = filteredProducts.filter((p: any) =>
+                        p.category === filters.category
+                    );
+                }
+
+                if (filters.condition) {
+                    filteredProducts = filteredProducts.filter((p: any) =>
+                        p.condition === filters.condition
+                    );
+                }
+
+                if (filters.search) {
+                    const searchTerm = filters.search.toLowerCase();
+                    filteredProducts = filteredProducts.filter((p: any) =>
+                        p.title?.toLowerCase().includes(searchTerm) ||
+                        p.managementNumber.toLowerCase().includes(searchTerm) ||
+                        p.category?.toLowerCase().includes(searchTerm) ||
+                        p.condition?.toLowerCase().includes(searchTerm)
+                    );
+                }
+
+                products = filteredProducts;
+            }
+
+            const filterInfo = [];
+            if (userId) filterInfo.push(`userId: ${userId}`);
+            if (filters?.folderId) filterInfo.push(`folderId: ${filters.folderId}`);
+            if (filters?.rank) filterInfo.push(`rank: ${filters.rank}`);
+            if (filters?.date) filterInfo.push(`date: ${filters.date}`);
+            if (filters?.worker) filterInfo.push(`worker: ${filters.worker}`);
+            if (filters?.category) filterInfo.push(`category: ${filters.category}`);
+            if (filters?.condition) filterInfo.push(`condition: ${filters.condition}`);
+            if (filters?.search) filterInfo.push(`search: ${filters.search}`);
+
+            console.log(`Found ${products.length} products for export${filterInfo.length > 0 ? ` (filtered by ${filterInfo.join(', ')})` : ''}`);
 
             if (products.length === 0) {
                 console.log('No products found in database');

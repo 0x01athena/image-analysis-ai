@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Save, Trash2, X, ChevronLeft, ChevronRight, FolderTree } from 'lucide-react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getProduct, updateProduct, deleteProduct, getAllProducts, selectTitle } from '../../api/batchApi';
 import CategorySelectionModal from '../../components/CategorySelectionModal';
 
 const ProductDetailsPage = () => {
     const { managementNumber } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -15,6 +16,7 @@ const ProductDetailsPage = () => {
     const [originalFormData, setOriginalFormData] = useState({});
     const [images, setImages] = useState([]);
     const [allProducts, setAllProducts] = useState([]);
+    const [filteredProducts, setFilteredProducts] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [candidateTitles, setCandidateTitles] = useState([]);
@@ -22,6 +24,20 @@ const ProductDetailsPage = () => {
     const [showImageModal, setShowImageModal] = useState(false);
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [allowNavigation, setAllowNavigation] = useState(false);
+    
+    // Get filter parameters from URL query string (if coming from products page)
+    const getFilterParams = () => {
+        const searchParams = new URLSearchParams(location.search);
+        return {
+            rank: searchParams.get('rank') || '',
+            date: searchParams.get('date') || '',
+            search: searchParams.get('search') || '',
+            worker: searchParams.get('worker') || '',
+            category: searchParams.get('category') || '',
+            condition: searchParams.get('condition') || '',
+            folderId: searchParams.get('folderId') || ''
+        };
+    };
 
     const loadProduct = async () => {
         try {
@@ -69,24 +85,65 @@ const ProductDetailsPage = () => {
         }
     };
 
-    const loadAllProducts = async () => {
+    const loadFilteredProducts = async () => {
         try {
-            const response = await getAllProducts({ limit: 1000 });
-            const products = response.data.products;
-            setAllProducts(products);
+            const filters = getFilterParams();
+            
+            // Check if we have any filters from URL
+            const hasFilters = Object.values(filters).some(val => val && val.trim() !== '');
+            
+            if (hasFilters) {
+                // Load filtered products
+                const params = {
+                    limit: '1000',
+                    ...(filters.rank && filters.rank.trim() && { rank: filters.rank.trim() }),
+                    ...(filters.date && { date: filters.date }),
+                    ...(filters.worker && { worker: filters.worker }),
+                    ...(filters.category && { category: filters.category }),
+                    ...(filters.condition && { condition: filters.condition }),
+                    ...(filters.search && filters.search.trim() && { search: filters.search.trim() }),
+                    ...(filters.folderId && filters.folderId.trim() && { folderId: filters.folderId.trim() })
+                };
+                
+                const response = await getAllProducts(params);
+                const products = response.data.products;
+                setFilteredProducts(products);
+                setAllProducts(products);
 
-            // Find current product index
-            const index = products.findIndex(p => p.managementNumber === managementNumber);
-            setCurrentIndex(index);
+                // Find current product index in filtered list
+                const index = products.findIndex(p => p.managementNumber === managementNumber);
+                setCurrentIndex(index >= 0 ? index : 0);
+            } else {
+                // No filters, load all products
+                const response = await getAllProducts({ limit: 1000 });
+                const products = response.data.products;
+                setFilteredProducts(products);
+                setAllProducts(products);
+
+                // Find current product index
+                const index = products.findIndex(p => p.managementNumber === managementNumber);
+                setCurrentIndex(index >= 0 ? index : 0);
+            }
         } catch (error) {
-            console.error('Error loading all products:', error);
+            console.error('Error loading filtered products:', error);
+            // Fallback to loading all products
+            try {
+                const response = await getAllProducts({ limit: 1000 });
+                const products = response.data.products;
+                setFilteredProducts(products);
+                setAllProducts(products);
+                const index = products.findIndex(p => p.managementNumber === managementNumber);
+                setCurrentIndex(index >= 0 ? index : 0);
+            } catch (fallbackError) {
+                console.error('Error loading all products:', fallbackError);
+            }
         }
     };
 
     useEffect(() => {
         loadProduct();
-        loadAllProducts();
-    }, [managementNumber]);
+        loadFilteredProducts();
+    }, [managementNumber, location.search]);
 
     // Check if there are unsaved changes
     const hasUnsavedChanges = useMemo(() => {
@@ -179,25 +236,40 @@ const ProductDetailsPage = () => {
         }
     };
 
+    // Navigate to next/previous product in filtered list
+    const navigateToProduct = (direction) => {
+        if (filteredProducts.length === 0) return;
+
+        const currentProductIndex = filteredProducts.findIndex(p => p.managementNumber === managementNumber);
+        if (currentProductIndex === -1) return;
+
+        let nextIndex;
+        if (direction === 'next') {
+            nextIndex = (currentProductIndex + 1) % filteredProducts.length;
+        } else {
+            nextIndex = (currentProductIndex - 1 + filteredProducts.length) % filteredProducts.length;
+        }
+
+        const nextProduct = filteredProducts[nextIndex];
+        if (nextProduct && nextProduct.managementNumber !== managementNumber) {
+            // Preserve filter params in URL when navigating
+            const filters = getFilterParams();
+            const params = new URLSearchParams();
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value && value.trim() !== '') {
+                    params.append(key, value.trim());
+                }
+            });
+            const queryString = params.toString();
+            const path = queryString ? `/products/${nextProduct.managementNumber}?${queryString}` : `/products/${nextProduct.managementNumber}`;
+            handleNavigation(path);
+        }
+    };
+
     const handleTabNavigation = (e) => {
         if (e.key === 'Tab') {
             e.preventDefault();
-
-            // Find next product with same date (regardless of level)
-            const currentProduct = allProducts[currentIndex];
-            if (!currentProduct) return;
-
-            const sameDate = allProducts.filter(p =>
-                new Date(p.createdAt).toDateString() === new Date(currentProduct.createdAt).toDateString()
-            );
-
-            const currentInFiltered = sameDate.findIndex(p => p.managementNumber === managementNumber);
-            const nextIndex = (currentInFiltered + 1) % sameDate.length;
-            const nextProduct = sameDate[nextIndex];
-
-            if (nextProduct && nextProduct.managementNumber !== managementNumber) {
-                handleNavigation(`/products/${nextProduct.managementNumber}`);
-            }
+            navigateToProduct('next');
         }
     };
 
@@ -279,7 +351,19 @@ const ProductDetailsPage = () => {
                     <div className="mb-6 flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <button
-                                onClick={() => handleNavigation('/products')}
+                                onClick={() => {
+                                    // Preserve filter params when going back to products page
+                                    const filters = getFilterParams();
+                                    const params = new URLSearchParams();
+                                    Object.entries(filters).forEach(([key, value]) => {
+                                        if (value && value.trim() !== '') {
+                                            params.append(key, value.trim());
+                                        }
+                                    });
+                                    const queryString = params.toString();
+                                    const path = queryString ? `/products?${queryString}` : '/products';
+                                    handleNavigation(path);
+                                }}
                                 className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-300"
                             >
                                 <ArrowLeft className="w-5 h-5" />
@@ -296,10 +380,34 @@ const ProductDetailsPage = () => {
                                         minute: '2-digit',
                                         second: '2-digit'
                                     })}</p>
+                                    {filteredProducts.length > 0 && (
+                                        <p className="text-sm text-blue-600">
+                                            ({filteredProducts.findIndex(p => p.managementNumber === managementNumber) + 1} / {filteredProducts.length})
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
+                            {/* Navigation Buttons */}
+                            {filteredProducts.length > 1 && (
+                                <div className="flex items-center gap-2 mr-2">
+                                    <button
+                                        onClick={() => navigateToProduct('prev')}
+                                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-300"
+                                        title="前の商品"
+                                    >
+                                        <ChevronLeft className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        onClick={() => navigateToProduct('next')}
+                                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-300"
+                                        title="次の商品"
+                                    >
+                                        <ChevronRight className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            )}
                             <button
                                 onClick={handleSave}
                                 disabled={saving}

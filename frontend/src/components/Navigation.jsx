@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Settings, FileText, BarChart3, Menu, X, Package, Users, History } from 'lucide-react';
+import { Home, Settings, FileText, BarChart3, Menu, X, Package, Users, History, Folder } from 'lucide-react';
 import { useUpload } from '../contexts/UploadContext';
 
 const Navigation = () => {
@@ -15,6 +15,7 @@ const Navigation = () => {
     const navItems = [
         { path: '/batch-processing', label: '一括処理', icon: FileText },
         { path: '/products', label: '商品一覧', icon: Package },
+        { path: '/folders', label: 'フォルダー管理', icon: Folder },
         { path: '/export-history', label: 'エクスポート履歴', icon: History },
         { path: '/workers', label: 'ワーカー管理', icon: Users },
         // { path: '/settings', label: '設定', icon: Settings },

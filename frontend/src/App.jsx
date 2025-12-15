@@ -8,6 +8,7 @@ import ProductsViewPage from './pages/products/ProductsViewPage';
 import ProductDetailsPage from './pages/products/ProductDetailsPage';
 import WorkerRegistrationPage from './pages/workers/WorkerRegistrationPage';
 import ExportHistoryPage from './pages/exports/ExportHistoryPage';
+import FoldersPage from './pages/folders/FoldersPage';
 import { UploadProvider } from './contexts/UploadContext';
 import "./App.css";
 
@@ -26,6 +27,7 @@ function App() {
               <Route path="/products/:managementNumber" element={<ProductDetailsPage />} />
               <Route path="/workers" element={<WorkerRegistrationPage />} />
               <Route path="/export-history" element={<ExportHistoryPage />} />
+              <Route path="/folders" element={<FoldersPage />} />
             </Routes>
           </div>
         </div>

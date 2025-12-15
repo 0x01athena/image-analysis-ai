@@ -26,7 +26,8 @@ const ProductsViewPage = () => {
         search: searchParams.get('search') || '',
         worker: searchParams.get('worker') || '',
         category: searchParams.get('category') || '',
-        condition: searchParams.get('condition') || ''
+        condition: searchParams.get('condition') || '',
+        folderId: searchParams.get('folderId') || ''
     });
 
     const loadProducts = async () => {
@@ -40,7 +41,8 @@ const ProductsViewPage = () => {
                 ...(filters.worker && { worker: filters.worker }),
                 ...(filters.category && { category: filters.category }),
                 ...(filters.condition && { condition: filters.condition }),
-                ...(filters.search && filters.search.trim() && { search: filters.search.trim() })
+                ...(filters.search && filters.search.trim() && { search: filters.search.trim() }),
+                ...(filters.folderId && filters.folderId.trim() && { folderId: filters.folderId.trim() })
             };
 
             const response = await getAllProducts(params);
@@ -93,7 +95,8 @@ const ProductsViewPage = () => {
             search: '',
             worker: '',
             category: '',
-            condition: ''
+            condition: '',
+            folderId: ''
         });
         updateURLParams({
             rank: '',
@@ -102,6 +105,7 @@ const ProductsViewPage = () => {
             worker: '',
             category: '',
             condition: '',
+            folderId: '',
             page: 1
         });
     };
@@ -137,18 +141,21 @@ const ProductsViewPage = () => {
         const workerFromUrl = searchParams.get('worker') || '';
         const categoryFromUrl = searchParams.get('category') || '';
         const conditionFromUrl = searchParams.get('condition') || '';
+        const folderIdFromUrl = searchParams.get('folderId') || '';
 
         setFilters(prev => {
             // Only update if values changed to avoid infinite loops
             if (prev.rank !== rankFromUrl || prev.date !== dateFromUrl || prev.search !== searchFromUrl ||
-                prev.worker !== workerFromUrl || prev.category !== categoryFromUrl || prev.condition !== conditionFromUrl) {
+                prev.worker !== workerFromUrl || prev.category !== categoryFromUrl || prev.condition !== conditionFromUrl ||
+                prev.folderId !== folderIdFromUrl) {
                 return {
                     rank: rankFromUrl,
                     date: dateFromUrl,
                     search: searchFromUrl,
                     worker: workerFromUrl,
                     category: categoryFromUrl,
-                    condition: conditionFromUrl
+                    condition: conditionFromUrl,
+                    folderId: folderIdFromUrl
                 };
             }
             return prev;
@@ -157,7 +164,7 @@ const ProductsViewPage = () => {
 
     useEffect(() => {
         loadProducts();
-    }, [currentPage, pageSize, filters.rank, filters.date, filters.worker, filters.category, filters.condition, filters.search]);
+    }, [currentPage, pageSize, filters.rank, filters.date, filters.worker, filters.category, filters.condition, filters.search, filters.folderId]);
 
     const handleSelectAll = (checked) => {
         if (checked) {
@@ -229,9 +236,23 @@ const ProductsViewPage = () => {
 
     const handleExportExcel = async () => {
         try {
-            const result = await exportExcelFile();
+            // Pass current filters to export function
+            const exportFilters = {
+                ...(filters.rank && filters.rank.trim() && { rank: filters.rank.trim() }),
+                ...(filters.date && { date: filters.date }),
+                ...(filters.worker && { worker: filters.worker }),
+                ...(filters.category && { category: filters.category }),
+                ...(filters.condition && { condition: filters.condition }),
+                ...(filters.search && filters.search.trim() && { search: filters.search.trim() })
+            };
+
+            const result = await exportExcelFile(exportFilters);
             if (result.success) {
-                alert('Excelファイルのエクスポートが完了しました！');
+                const filterCount = Object.keys(exportFilters).length;
+                const message = filterCount > 0 
+                    ? `フィルター適用済みのExcelファイルのエクスポートが完了しました！\n（${filterCount}個のフィルターが適用されています）`
+                    : 'Excelファイルのエクスポートが完了しました！';
+                alert(message);
             } else {
                 const errorMessage = result.error || 'Unknown error';
                 const managementNumber = result.managementNumber;
@@ -492,7 +513,22 @@ const ProductsViewPage = () => {
                                             <td className="p-4">
                                                 <div className="flex items-center gap-2">
                                                     <button
-                                                        onClick={() => navigate(`/products/${product.managementNumber}`)}
+                                                        onClick={() => {
+                                                            // Preserve current filter params when navigating to details page
+                                                            const params = new URLSearchParams();
+                                                            if (filters.rank) params.append('rank', filters.rank);
+                                                            if (filters.date) params.append('date', filters.date);
+                                                            if (filters.worker) params.append('worker', filters.worker);
+                                                            if (filters.category) params.append('category', filters.category);
+                                                            if (filters.condition) params.append('condition', filters.condition);
+                                                            if (filters.search) params.append('search', filters.search);
+                                                            if (filters.folderId) params.append('folderId', filters.folderId);
+                                                            const queryString = params.toString();
+                                                            const path = queryString 
+                                                                ? `/products/${product.managementNumber}?${queryString}`
+                                                                : `/products/${product.managementNumber}`;
+                                                            navigate(path);
+                                                        }}
                                                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-300"
                                                         title="詳細を見る"
                                                     >
