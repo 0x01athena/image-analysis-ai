@@ -4,6 +4,7 @@ import { Eye, Trash2, ChevronLeft, ChevronRight, Filter, Search, ChevronsLeft, C
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAllProducts, deleteProduct, deleteMultipleProducts, exportExcelFile } from '../../api/batchApi';
 import { useUserSession } from '../../hooks/useUserSession';
+import { formatJSTLocale } from '../../utils/dateUtils';
 
 const ProductsViewPage = () => {
     const navigate = useNavigate();
@@ -409,7 +410,7 @@ const ProductsViewPage = () => {
                                         key={key}
                                         className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
                                     >
-                                        {labels[key]}: {key === 'date' ? new Date(value).toLocaleDateString('ja-JP') : value}
+                                        {labels[key]}: {key === 'date' ? formatJSTLocale(value, { year: 'numeric', month: '2-digit', day: '2-digit' }) : value}
                                         <button
                                             onClick={() => handleFilterChange(key, '')}
                                             className="ml-1 text-blue-600 hover:text-blue-800"
@@ -508,7 +509,7 @@ const ProductsViewPage = () => {
                                                 {product.user?.username || '未設定'}
                                             </td>
                                             <td className="p-4 text-sm text-gray-600">
-                                                {new Date(product.createdAt).toLocaleDateString('ja-JP')}
+                                                {formatJSTLocale(product.createdAt, { year: 'numeric', month: '2-digit', day: '2-digit' })}
                                             </td>
                                             <td className="p-4">
                                                 <div className="flex items-center gap-2">

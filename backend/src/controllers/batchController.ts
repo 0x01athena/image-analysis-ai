@@ -6,6 +6,7 @@ import { userService } from '../services/UserService';
 import { categoryService } from '../services/CategoryService';
 import { excelExportHistoryService } from '../services/ExcelExportHistoryService';
 import { folderService } from '../services/FolderService';
+import { isSameJSTDate, getJSTDate } from '../utils/dateUtils';
 
 
 
@@ -219,7 +220,7 @@ class BatchController {
                 data: {
                     workProcessId,
                     totalProducts: productIds.length,
-                    startTime: new Date()
+                    startTime: getJSTDate()
                 }
             });
 
@@ -378,18 +379,9 @@ class BatchController {
             }
 
             if (date) {
-                // Parse the date string (YYYY-MM-DD) and compare date components directly
-                // This avoids timezone issues when comparing dates
-                const targetDateParts = (date as string).split('-');
-                const targetYear = parseInt(targetDateParts[0]);
-                const targetMonth = parseInt(targetDateParts[1]) - 1; // Month is 0-indexed
-                const targetDay = parseInt(targetDateParts[2]);
-                
+                // Filter by date using JST comparison
                 filteredProducts = filteredProducts.filter((p: any) => {
-                    const productDate = new Date(p.createdAt);
-                    return productDate.getFullYear() === targetYear &&
-                           productDate.getMonth() === targetMonth &&
-                           productDate.getDate() === targetDay;
+                    return isSameJSTDate(p.createdAt, date as string);
                 });
             }
 

@@ -4,6 +4,7 @@ import { Download, History, User, Calendar, Trash2, ChevronUp, ChevronDown } fro
 import { useNavigate } from 'react-router-dom';
 import { getExportHistory, deleteExportHistory } from '../../api/batchApi';
 import { BACKEND_URL } from '../../api/config';
+import { formatJSTLocale } from '../../utils/dateUtils';
 
 const ExportHistoryPage = () => {
     const navigate = useNavigate();
@@ -189,7 +190,7 @@ const ExportHistoryPage = () => {
                                                 <div className="flex items-center gap-2">
                                                     <Calendar size={16} className="text-gray-400" />
                                                     <span className="text-sm text-gray-700">
-                                                        {new Date(item.createdAt).toLocaleString('ja-JP')}
+                                                        {formatJSTLocale(item.createdAt)}
                                                     </span>
                                                 </div>
                                             </td>

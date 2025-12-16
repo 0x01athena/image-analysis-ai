@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { getAllFolders, deleteFolder, exportExcelFile } from '../../api/batchApi';
 import { useUserSession } from '../../hooks/useUserSession';
 import { BACKEND_URL } from '../../api/config';
+import { formatJSTDate, formatJSTLocale } from '../../utils/dateUtils';
 
 const FoldersPage = () => {
     const navigate = useNavigate();
@@ -79,13 +80,8 @@ const FoldersPage = () => {
     };
 
     const handleGoToProducts = (folder) => {
-        // Format the folder creation date as YYYY-MM-DD in local timezone
-        // This ensures it matches the date comparison logic in the backend
-        const folderCreatedDate = new Date(folder.createdAt);
-        const year = folderCreatedDate.getFullYear();
-        const month = String(folderCreatedDate.getMonth() + 1).padStart(2, '0');
-        const day = String(folderCreatedDate.getDate()).padStart(2, '0');
-        const folderDate = `${year}-${month}-${day}`;
+        // Format the folder creation date as YYYY-MM-DD in JST
+        const folderDate = formatJSTDate(folder.createdAt);
 
         // Get username from folder.user or use folder.userId
         const username = folder.user?.username || folder.userId;
@@ -119,7 +115,7 @@ const FoldersPage = () => {
     };
 
     const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('ja-JP', {
+        return formatJSTLocale(dateString, {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit'
@@ -227,18 +223,18 @@ const FoldersPage = () => {
 
                                                     {/* Download Excel Button - shown when Excel file exists */}
                                                     {/* {folder.excelFileName && ( */}
-                                                        <button
-                                                            onClick={() => handleExportExcel(folder)}
-                                                            disabled={exporting.has(folder.id)}
-                                                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                            title="Excelファイルをエクスポート"
-                                                        >
-                                                            {exporting.has(folder.id) ? (
-                                                                <RefreshCw className="w-4 h-4 animate-spin" />
-                                                            ) : (
-                                                                <Download className="w-4 h-4" />
-                                                            )}
-                                                        </button>
+                                                    <button
+                                                        onClick={() => handleExportExcel(folder)}
+                                                        disabled={exporting.has(folder.id)}
+                                                        className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        title="Excelファイルをエクスポート"
+                                                    >
+                                                        {exporting.has(folder.id) ? (
+                                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                                        ) : (
+                                                            <Download className="w-4 h-4" />
+                                                        )}
+                                                    </button>
                                                     {/* )} */}
 
                                                     {/* Delete Button */}

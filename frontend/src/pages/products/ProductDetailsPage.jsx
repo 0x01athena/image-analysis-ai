@@ -4,6 +4,7 @@ import { ArrowLeft, Save, Trash2, X, ChevronLeft, ChevronRight, FolderTree } fro
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getProduct, updateProduct, deleteProduct, getAllProducts, selectTitle } from '../../api/batchApi';
 import CategorySelectionModal from '../../components/CategorySelectionModal';
+import { formatJSTLocale } from '../../utils/dateUtils';
 
 const ProductDetailsPage = () => {
     const { managementNumber } = useParams();
@@ -372,7 +373,7 @@ const ProductDetailsPage = () => {
                                 <h1 className="text-2xl font-bold text-gray-900 mb-1">商品詳細</h1>
                                 <div className="flex items-center gap-2">
                                     <p className="text-gray-600"><b>管理番号</b>: {product.managementNumber}</p>
-                                    <p className="text-sm text-gray-500"><b>アップロード日時</b>: {new Date(product.createdAt).toLocaleString('ja-JP', {
+                                    <p className="text-sm text-gray-500"><b>アップロード日時</b>: {formatJSTLocale(product.createdAt, {
                                         year: 'numeric',
                                         month: '2-digit',
                                         day: '2-digit',

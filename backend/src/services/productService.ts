@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 import ExcelJS from 'exceljs';
+import { isSameJSTDate, getJSTDate } from '../utils/dateUtils';
 
 const prisma = new PrismaClient();
 
@@ -93,7 +94,7 @@ export class ProductService {
                     // Handle duplicate files for new products
                     const processedNewImages = await this.handleDuplicateFiles(managementNumber, newImages);
 
-                    // Create new product
+                    // Create new product with JST timestamp
                     const newProduct = await prisma.product.create({
                         data: {
                             managementNumber,
@@ -108,7 +109,9 @@ export class ProductService {
                             shop2: null,
                             shop3: null,
                             price: price !== undefined && price !== null ? price : null,
-                            folderId: folderId || null
+                            folderId: folderId || null,
+                            createdAt: getJSTDate(),
+                            updatedAt: getJSTDate()
                         }
                     });
                     savedProducts.push(newProduct);
@@ -579,10 +582,9 @@ export class ProductService {
                 }
 
                 if (filters.date) {
-                    const targetDate = new Date(filters.date);
+                    // Filter by date using JST comparison
                     filteredProducts = filteredProducts.filter((p: any) => {
-                        const productDate = new Date(p.createdAt);
-                        return productDate.toDateString() === targetDate.toDateString();
+                        return isSameJSTDate(p.createdAt, filters.date as string);
                     });
                 }
 

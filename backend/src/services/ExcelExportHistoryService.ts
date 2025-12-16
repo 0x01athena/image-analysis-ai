@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
+import { getJSTDateComponents } from '../utils/dateUtils';
 
 const prisma = new PrismaClient();
 
@@ -16,8 +17,9 @@ export class ExcelExportHistoryService {
                 fs.mkdirSync(exportsDir, { recursive: true });
             }
 
-            // Generate unique filename with format: products_export_2025-12-12T20-15-39-829Z.xlsx
-            const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\./g, '-');
+            // Generate unique filename with format: products_export_2025-12-12T20-15-39-829JST.xlsx (using JST)
+            const components = getJSTDateComponents();
+            const timestamp = `${components.year}-${String(components.month).padStart(2, '0')}-${String(components.day).padStart(2, '0')}T${String(components.hour).padStart(2, '0')}-${String(components.minute).padStart(2, '0')}-${String(components.second).padStart(2, '0')}JST`;
             const fileName = `products_export_${timestamp}.xlsx`;
             const filePath = path.join(exportsDir, fileName);
 

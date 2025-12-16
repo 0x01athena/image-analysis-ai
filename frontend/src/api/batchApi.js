@@ -329,7 +329,12 @@ export const exportExcelFile = async (filters = {}) => {
 
         // Get filename from Content-Disposition header if available
         const contentDisposition = response.headers.get('Content-Disposition');
-        let filename = `products_export_${new Date().toISOString().replace(/:/g, '-').replace(/\./g, '-')}.xlsx`;
+        // Generate filename with JST timestamp (fallback, actual filename comes from server)
+        // Import dynamically to avoid circular dependencies
+        const dateUtils = await import('../utils/dateUtils');
+        const components = dateUtils.getJSTDateComponents();
+        const timestamp = `${components.year}-${String(components.month).padStart(2, '0')}-${String(components.day).padStart(2, '0')}T${String(components.hour).padStart(2, '0')}-${String(components.minute).padStart(2, '0')}-${String(components.second).padStart(2, '0')}JST`;
+        let filename = `products_export_${timestamp}.xlsx`;
 
         if (contentDisposition) {
             const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);

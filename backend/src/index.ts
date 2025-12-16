@@ -7,6 +7,7 @@ import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import path from 'path';
 import { openAIService } from './services/OpenAIService';
+import { getJSTDate } from './utils/dateUtils';
 
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../.env') });
@@ -106,7 +107,7 @@ app.get('/health', async (req, res) => {
         res.status(200).json({
             success: true,
             message: 'Server is running',
-            timestamp: new Date().toISOString(),
+            timestamp: getJSTDate().toISOString(),
             environment: process.env.NODE_ENV || 'development',
             services: {
                 openai: openAIConnected ? 'connected' : 'disconnected'
@@ -116,7 +117,7 @@ app.get('/health', async (req, res) => {
         res.status(200).json({
             success: true,
             message: 'Server is running',
-            timestamp: new Date().toISOString(),
+            timestamp: getJSTDate().toISOString(),
             environment: process.env.NODE_ENV || 'development',
             services: {
                 openai: 'error'

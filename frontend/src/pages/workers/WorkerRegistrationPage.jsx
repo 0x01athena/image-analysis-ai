@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Edit2, Trash2, Save, X, Users, UserPlus, Search, Filter, SortAsc, SortDesc } from 'lucide-react';
 import { createUser, getAllUsers, updateUser, deleteMultipleUsers } from '../../api/userApi';
+import { formatJSTLocale, getJSTDateComponents } from '../../utils/dateUtils';
 
 const WorkerRegistrationPage = () => {
     const [users, setUsers] = useState([]);
@@ -47,30 +48,32 @@ const WorkerRegistrationPage = () => {
             // Search filter
             const matchesSearch = user.username.toLowerCase().includes(searchTerm.toLowerCase());
 
-            // Date range filter
+            // Date range filter (using JST)
             let matchesDateRange = true;
             if (filters.dateRange) {
                 const userDate = new Date(user.createdAt);
-                const now = new Date();
+                const nowComponents = getJSTDateComponents();
 
                 switch (filters.dateRange) {
                     case 'today':
-                        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                        matchesDateRange = userDate >= today;
+                        // Compare dates in JST
+                        const userComponents = getJSTDateComponents(user.createdAt);
+                        matchesDateRange = userComponents.year === nowComponents.year &&
+                                         userComponents.month === nowComponents.month &&
+                                         userComponents.day === nowComponents.day;
                         break;
                     case 'week':
-                        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
                         matchesDateRange = userDate >= weekAgo;
                         break;
                     case 'month':
-                        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
                         matchesDateRange = userDate >= monthAgo;
                         break;
                     case 'custom':
                         if (filters.customStartDate && filters.customEndDate) {
-                            const startDate = new Date(filters.customStartDate);
-                            const endDate = new Date(filters.customEndDate);
-                            endDate.setHours(23, 59, 59, 999); // Include the entire end date
+                            const startDate = new Date(filters.customStartDate + 'T00:00:00+09:00');
+                            const endDate = new Date(filters.customEndDate + 'T23:59:59+09:00');
                             matchesDateRange = userDate >= startDate && userDate <= endDate;
                         }
                         break;
@@ -562,10 +565,10 @@ const WorkerRegistrationPage = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {new Date(user.createdAt).toLocaleString('ja-JP')}
+                                                {formatJSTLocale(user.createdAt)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {new Date(user.updatedAt).toLocaleString('ja-JP')}
+                                                {formatJSTLocale(user.updatedAt)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                 <div className="flex items-center space-x-2">
