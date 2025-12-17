@@ -29,6 +29,7 @@ export interface ProductData {
     imageReference?: string | null;
     packagingSize?: string | null;
     season?: string | null;
+    accessories?: string | null;
     userId?: string | null;
 }
 
@@ -110,6 +111,7 @@ export class ProductService {
                             shop3: null,
                             price: price !== undefined && price !== null ? price : null,
                             folderId: folderId || null,
+                            accessories: '無<br>採寸はAIが1cm各の格子背景で行っております。',
                             createdAt: getJSTDate(),
                             updatedAt: getJSTDate()
                         }
@@ -222,6 +224,7 @@ export class ProductService {
             if (data.imageReference !== undefined) updateData.imageReference = data.imageReference;
             if (data.packagingSize !== undefined) updateData.packagingSize = data.packagingSize;
             if (data.season !== undefined) updateData.season = data.season;
+            if (data.accessories !== undefined) updateData.accessories = data.accessories;
             if (data.userId !== undefined) updateData.userId = data.userId;
 
             const updatedProduct = await prisma.product.update({
@@ -541,7 +544,7 @@ export class ProductService {
 
     /**
      * Export products to new Excel file - creates multiple sheets as specified
-     * @param userId - Optional user ID to filter products by the user who uploaded them
+     * @param userId - Optional user ID (for export history tracking only, not used for filtering)
      * @param filters - Optional filter parameters (rank, date, worker, category, condition, search, folderId)
      */
     async exportProductsToExcel(userId?: string, filters?: {
@@ -554,16 +557,13 @@ export class ProductService {
         folderId?: string;
     }): Promise<Buffer | ArrayBuffer> {
         try {
-            // Build where clause
+            // Build where clause (userId filter removed - export all filtered products)
             const whereClause: any = {};
-            if (userId) {
-                whereClause.userId = userId;
-            }
             if (filters?.folderId) {
                 whereClause.folderId = filters.folderId;
             }
 
-            // Get products from database with user relation, filtered by userId and folderId if provided
+            // Get products from database with user relation, filtered by folderId if provided (no userId filter)
             let products = await prisma.product.findMany({
                 where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
                 include: {
@@ -620,7 +620,6 @@ export class ProductService {
             }
 
             const filterInfo = [];
-            if (userId) filterInfo.push(`userId: ${userId}`);
             if (filters?.folderId) filterInfo.push(`folderId: ${filters.folderId}`);
             if (filters?.rank) filterInfo.push(`rank: ${filters.rank}`);
             if (filters?.date) filterInfo.push(`date: ${filters.date}`);
@@ -721,7 +720,7 @@ export class ProductService {
                         product.category || '',                                     // カテゴリ
                         product.managementNumber || '',                             // 管理番号
                         final_title,                                                // タイトル
-                        '無<br>採寸はAIが1cm各の格子背景で行っております。',      // 付属品
+                        product.accessories || '無<br>採寸はAIが1cm各の格子背景で行っております。',      // 付属品
                         `ベース${base}/K`,                                                // ラック
                         product.condition || '',                                    // ランク
                         '',                                                         // 型番
@@ -760,7 +759,6 @@ export class ProductService {
                     ];
 
                     let error = "";
-                    if (row[0] === '') error = `${headers[0]}が空です。`;
                     if (row[1] === '') error = `${headers[1]}が空です。`;
                     if (row[2] === '') error = `${headers[2]}が空です。`;
                     if (row[3] === '') error = `${headers[3]}が空です。`;
@@ -811,7 +809,7 @@ export class ProductService {
                         '',                                     // カテゴリ
                         '',                             // 管理番号
                         '◇ E',                                                // タイトル
-                        '無<br>採寸はAIが1cm各の格子背景で行っております。',      // 付属品
+                        '無<br>採寸はAIが1cm各の格子背景で行っております。',      // 付属品 (empty row default)
                         `ベースB`,                                                // ラック
                         '',                                    // ランク
                         '',                                                         // 型番

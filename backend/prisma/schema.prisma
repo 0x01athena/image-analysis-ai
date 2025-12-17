@@ -33,6 +33,7 @@ model Product {
   imageReference   String?  // 素材 (画像参照 or /ソール)
   packagingSize    String   @default("通常") // 梱包サイズ
   season           String?  // シーズン (春夏:⊂, 秋冬:⊇, 通年:Θ)
+  accessories      String?  @default("無<br>採寸はAIが1cm各の格子背景で行っております。") // 付属品
   userId           String?  // User who processed this product
   folderId         String?  // Folder this product belongs to
   createdAt        DateTime @default(now())

@@ -301,10 +301,13 @@ export const deleteMultipleProducts = async (managementNumbers) => {
  */
 export const exportExcelFile = async (filters = {}) => {
     try {
-        const userId = JSON.parse(localStorage.getItem('selectedUser')).id;
+        // Get userId from localStorage if available (optional - for export history tracking)
+        const selectedUser = localStorage.getItem('selectedUser');
+        const userId = selectedUser ? JSON.parse(selectedUser).id : null;
 
-        // Build query string with userId and filters
-        const params = new URLSearchParams({ userId });
+        // Build query string with filters (userId is optional)
+        const params = new URLSearchParams();
+        if (userId) params.append('userId', userId);
         if (filters.rank) params.append('rank', filters.rank);
         if (filters.date) params.append('date', filters.date);
         if (filters.worker) params.append('worker', filters.worker);

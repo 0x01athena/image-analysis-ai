@@ -275,4 +275,3 @@ const FoldersPage = () => {
 };
 
 export default FoldersPage;
-

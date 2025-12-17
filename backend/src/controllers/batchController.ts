@@ -855,25 +855,19 @@ class BatchController {
      */
     exportExcelFile = async (req: Request, res: Response): Promise<void> => {
         try {
-            // Get userId from request body or query
-            const userId = (req.body?.userId || req.query?.userId) as string;
+            // Get userId from request body or query (optional - for export history tracking only)
+            const userId = (req.body?.userId || req.query?.userId) as string | undefined;
 
-            if (!userId) {
-                res.status(400).json({
-                    success: false,
-                    message: 'User ID is required'
-                });
-                return;
-            }
-
-            // Verify user exists
-            const user = await userService.getUserById(userId);
-            if (!user) {
-                res.status(404).json({
-                    success: false,
-                    message: 'User not found'
-                });
-                return;
+            // Verify user exists only if userId is provided
+            if (userId) {
+                const user = await userService.getUserById(userId);
+                if (!user) {
+                    res.status(404).json({
+                        success: false,
+                        message: 'User not found'
+                    });
+                    return;
+                }
             }
 
             // Get filter parameters from query
@@ -898,18 +892,24 @@ class BatchController {
             if (search) filters.search = search as string;
             if (folderId) filters.folderId = folderId as string;
 
-            // Generate new Excel file with products filtered by userId and additional filters
+            // Generate new Excel file with products filtered by additional filters only (no userId filter)
             const buffer = await productService.exportProductsToExcel(userId, Object.keys(filters).length > 0 ? filters : undefined);
 
-            // Save file and create history record
-            const history = await excelExportHistoryService.saveExportHistory(userId, buffer);
+            // Save file and create history record only if userId is provided
+            let history = null;
+            if (userId) {
+                history = await excelExportHistoryService.saveExportHistory(userId, buffer);
+            }
 
-            // Update folder's excelFileName if folderId is provided
-            if (filters.folderId) {
+            // Update folder's excelFileName if folderId and history are available
+            if (filters.folderId && history) {
                 await folderService.updateFolder(filters.folderId, {
                     excelFileName: history.fileName
                 });
             }
+
+            // Generate filename if history is not available
+            const fileName = history?.fileName || `products_export_${Date.now()}.xlsx`;
 
             res.setHeader(
                 'Content-Type',
@@ -917,7 +917,7 @@ class BatchController {
             );
             res.setHeader(
                 'Content-Disposition',
-                `attachment; filename="${encodeURIComponent(history.fileName)}"`
+                `attachment; filename="${encodeURIComponent(fileName)}"`
             );
 
             // Send buffer as response
