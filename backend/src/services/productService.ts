@@ -294,6 +294,66 @@ export class ProductService {
     }
 
     /**
+     * Delete all products in a folder and their associated images
+     */
+    async deleteProductsByFolderId(folderId: string): Promise<{ deleted: number, failed: number }> {
+        let deleted = 0;
+        let failed = 0;
+
+        try {
+            // Get all products in this folder
+            const products = await prisma.product.findMany({
+                where: { folderId }
+            });
+
+            console.log(`Found ${products.length} products in folder ${folderId}`);
+
+            // Delete each product and its images
+            for (const product of products) {
+                try {
+                    // Delete associated image files
+                    try {
+                        const images = JSON.parse(product.images as string || "[]");
+                        const imagesDir = path.join(__dirname, '../../public/images');
+
+                        for (const imageFilename of images) {
+                            const imagePath = path.join(imagesDir, imageFilename);
+
+                            // Check if file exists before attempting to delete
+                            if (fs.existsSync(imagePath)) {
+                                fs.unlinkSync(imagePath);
+                                console.log(`Deleted image file: ${imageFilename}`);
+                            } else {
+                                console.log(`Image file not found: ${imageFilename}`);
+                            }
+                        }
+                    } catch (imageError) {
+                        console.error(`Error deleting image files for product ${product.managementNumber}:`, imageError);
+                        // Continue even if image deletion fails
+                    }
+
+                    // Delete the product from database by id
+                    await prisma.product.delete({
+                        where: { id: product.id }
+                    });
+
+                    deleted++;
+                    console.log(`Deleted product ${product.managementNumber} (ID: ${product.id})`);
+                } catch (error) {
+                    failed++;
+                    console.error(`Failed to delete product ${product.managementNumber} (ID: ${product.id}):`, error);
+                }
+            }
+
+            console.log(`Successfully deleted ${deleted} products from folder ${folderId}, ${failed} failed`);
+            return { deleted, failed };
+        } catch (error) {
+            console.error(`Error deleting products by folder ID ${folderId}:`, error);
+            throw error;
+        }
+    }
+
+    /**
      * Merge images with duplicate detection, maintaining sequence order
      */
     private mergeImagesWithDuplicateDetection(existingImages: string[], newImages: string[]): string[] {

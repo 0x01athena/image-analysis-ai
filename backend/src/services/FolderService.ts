@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { productService } from './ProductService';
 
 const prisma = new PrismaClient();
 
@@ -205,10 +206,20 @@ export class FolderService {
     }
 
     /**
-     * Delete folder
+     * Delete folder and all associated products and images
      */
     async deleteFolder(id: string): Promise<any> {
         try {
+            // First, delete all products in this folder and their images
+            try {
+                const result = await productService.deleteProductsByFolderId(id);
+                console.log(`Deleted ${result.deleted} products from folder ${id}, ${result.failed} failed`);
+            } catch (productError) {
+                console.error(`Error deleting products for folder ${id}:`, productError);
+                // Continue with folder deletion even if product deletion fails
+            }
+
+            // Delete the folder
             return await prisma.folder.delete({
                 where: { id }
             });

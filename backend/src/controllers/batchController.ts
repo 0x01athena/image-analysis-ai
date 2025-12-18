@@ -1112,7 +1112,7 @@ class BatchController {
             await folderService.deleteFolder(id);
             res.status(200).json({
                 success: true,
-                message: 'Folder deleted successfully'
+                message: 'Folder and all associated products deleted successfully'
             });
         } catch (error) {
             console.error('Error deleting folder:', error);
