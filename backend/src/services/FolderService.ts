@@ -18,13 +18,14 @@ export class FolderService {
      */
     async createOrGetFolder(data: CreateFolderData): Promise<any> {
         try {
-            // Try to find existing folder
-            const existingFolder = await prisma.folder.findUnique({
+            // Try to find existing folder (most recent one if multiple exist)
+            const existingFolder = await prisma.folder.findFirst({
                 where: {
-                    userId_foldername: {
-                        userId: data.userId,
-                        foldername: data.foldername
-                    }
+                    userId: data.userId,
+                    foldername: data.foldername
+                },
+                orderBy: {
+                    createdAt: 'desc'
                 }
             });
 
@@ -44,6 +45,27 @@ export class FolderService {
             return folder;
         } catch (error) {
             console.error('Error creating or getting folder:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Always create a new folder (even if one with same name exists for the user)
+     */
+    async createFolder(data: CreateFolderData): Promise<any> {
+        try {
+            // Always create a new folder with the same name
+            const folder = await prisma.folder.create({
+                data: {
+                    userId: data.userId,
+                    foldername: data.foldername,
+                    numberOfUploadedProducts: 0
+                }
+            });
+
+            return folder;
+        } catch (error) {
+            console.error('Error creating folder:', error);
             throw error;
         }
     }
@@ -198,15 +220,17 @@ export class FolderService {
 
     /**
      * Get folder by user and foldername
+     * Returns the most recently created folder if multiple exist
      */
     async getFolderByUserAndName(userId: string, foldername: string): Promise<any | null> {
         try {
-            return await prisma.folder.findUnique({
+            return await prisma.folder.findFirst({
                 where: {
-                    userId_foldername: {
-                        userId,
-                        foldername
-                    }
+                    userId,
+                    foldername
+                },
+                orderBy: {
+                    createdAt: 'desc'
                 }
             });
         } catch (error) {

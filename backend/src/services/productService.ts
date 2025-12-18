@@ -45,79 +45,32 @@ export class ProductService {
 
         for (const [managementNumber, newImages] of Object.entries(productImages)) {
             try {
-                // Check if product already exists
-                const existingProduct = await prisma.product.findUnique({
-                    where: { managementNumber }
+                // Always create new product - even if products with same management number exist
+                // Each product has a unique id, so duplicates are allowed
+                const processedNewImages = await this.handleDuplicateFiles(managementNumber, newImages);
+
+                // Create new product with JST timestamp
+                const newProduct = await prisma.product.create({
+                    data: {
+                        managementNumber,
+                        images: JSON.stringify(processedNewImages),
+                        title: null,
+                        candidateTitles: "[]",
+                        level: null,
+                        measurement: null,
+                        condition: null,
+                        category: null,
+                        shop1: null,
+                        shop2: null,
+                        shop3: null,
+                        price: price !== undefined && price !== null ? price : null,
+                        folderId: folderId || null,
+                        accessories: '無<br>採寸はAIが1cm各の格子背景で行っております。',
+                        createdAt: getJSTDate(),
+                        updatedAt: getJSTDate()
+                    }
                 });
-
-                if (existingProduct) {
-                    // Get existing images
-                    const existingImages = JSON.parse(existingProduct?.images as string || "[]");
-
-                    // Handle duplicate files in filesystem
-                    const processedNewImages = await this.handleDuplicateFiles(managementNumber, newImages);
-
-                    // Check for duplicates and merge images intelligently
-                    const mergedImages = this.mergeImagesWithDuplicateDetection(existingImages, processedNewImages);
-
-                    // Prepare update data
-                    const updateData: any = {
-                        images: JSON.stringify(mergedImages),
-                        updatedAt: new Date()
-                    };
-
-                    // Update price if provided
-                    if (price !== undefined && price !== null) {
-                        updateData.price = price;
-                    }
-
-                    // Update folderId if provided and product doesn't have one
-                    if (folderId && !existingProduct.folderId) {
-                        updateData.folderId = folderId;
-                    }
-
-                    // Only update if there are actual changes
-                    if (mergedImages.length !== existingImages.length ||
-                        !this.arraysEqual(mergedImages, existingImages) ||
-                        (price !== undefined && price !== null && existingProduct.price !== price) ||
-                        (folderId && !existingProduct.folderId)) {
-
-                        const updatedProduct = await prisma.product.update({
-                            where: { managementNumber },
-                            data: updateData
-                        });
-                        savedProducts.push(updatedProduct);
-                    } else {
-                        console.log(`Product ${managementNumber} already up to date, no changes needed`);
-                        savedProducts.push(existingProduct);
-                    }
-                } else {
-                    // Handle duplicate files for new products
-                    const processedNewImages = await this.handleDuplicateFiles(managementNumber, newImages);
-
-                    // Create new product with JST timestamp
-                    const newProduct = await prisma.product.create({
-                        data: {
-                            managementNumber,
-                            images: JSON.stringify(processedNewImages),
-                            title: null,
-                            candidateTitles: "[]",
-                            level: null,
-                            measurement: null,
-                            condition: null,
-                            category: null,
-                            shop1: null,
-                            shop2: null,
-                            shop3: null,
-                            price: price !== undefined && price !== null ? price : null,
-                            folderId: folderId || null,
-                            accessories: '無<br>採寸はAIが1cm各の格子背景で行っております。',
-                            createdAt: getJSTDate(),
-                            updatedAt: getJSTDate()
-                        }
-                    });
-                    savedProducts.push(newProduct);
-                }
+                savedProducts.push(newProduct);
             } catch (error) {
                 console.error(`Error saving product ${managementNumber}:`, error);
             }
@@ -132,14 +85,12 @@ export class ProductService {
     async getUploadSummary(productImages: ProductImages): Promise<{
         totalProducts: number;
         newProducts: number;
-        updatedProducts: number;
         totalImages: number;
         newImages: number;
         duplicateImages: number;
         details: Array<{
             managementNumber: string;
-            status: 'new' | 'updated' | 'no_change';
-            existingImages: number;
+            status: 'new';
             newImages: number;
             duplicates: number;
         }>;
@@ -147,52 +98,30 @@ export class ProductService {
         const summary = {
             totalProducts: Object.keys(productImages).length,
             newProducts: 0,
-            updatedProducts: 0,
             totalImages: 0,
             newImages: 0,
             duplicateImages: 0,
             details: [] as Array<{
                 managementNumber: string;
-                status: 'new' | 'updated' | 'no_change';
-                existingImages: number;
+                status: 'new';
                 newImages: number;
                 duplicates: number;
             }>
         };
 
         for (const [managementNumber, newImages] of Object.entries(productImages)) {
-            const existingProduct = await prisma.product.findUnique({
-                where: { managementNumber }
-            });
-
-            const existingImages = existingProduct ? JSON.parse(existingProduct.images as string || "[]") : [];
+            // All products will be created as new (even if same management number exists)
             const processedNewImages = await this.handleDuplicateFiles(managementNumber, newImages);
-            const mergedImages = this.mergeImagesWithDuplicateDetection(existingImages, processedNewImages);
-
-            const addedCount = mergedImages.length - existingImages.length;
-            const duplicateCount = newImages.length - addedCount;
-
-            let status: 'new' | 'updated' | 'no_change';
-            if (!existingProduct) {
-                status = 'new';
-                summary.newProducts++;
-            } else if (addedCount > 0) {
-                status = 'updated';
-                summary.updatedProducts++;
-            } else {
-                status = 'no_change';
-            }
-
+            summary.newProducts++;
             summary.totalImages += newImages.length;
-            summary.newImages += addedCount;
-            summary.duplicateImages += duplicateCount;
+            summary.newImages += processedNewImages.length;
+            summary.duplicateImages += (newImages.length - processedNewImages.length);
 
             summary.details.push({
                 managementNumber,
-                status,
-                existingImages: existingImages.length,
-                newImages: addedCount,
-                duplicates: duplicateCount
+                status: 'new',
+                newImages: processedNewImages.length,
+                duplicates: newImages.length - processedNewImages.length
             });
         }
 
@@ -201,9 +130,22 @@ export class ProductService {
 
     /**
      * Update product with processing results
+     * Updates the most recently created product if multiple exist
      */
     async updateProductWithResults(managementNumber: string, data: Partial<ProductData>): Promise<any> {
         try {
+            // Get the most recently created product with this management number
+            const product = await prisma.product.findFirst({
+                where: { managementNumber },
+                orderBy: {
+                    createdAt: 'desc'
+                }
+            });
+
+            if (!product) {
+                throw new Error(`Product with management number ${managementNumber} not found`);
+            }
+
             const updateData: any = {
                 updatedAt: new Date()
             };
@@ -228,7 +170,7 @@ export class ProductService {
             if (data.userId !== undefined) updateData.userId = data.userId;
 
             const updatedProduct = await prisma.product.update({
-                where: { managementNumber },
+                where: { id: product.id },
                 data: updateData
             });
 
@@ -241,13 +183,17 @@ export class ProductService {
 
     /**
      * Get product by management number
+     * Returns the most recently created product if multiple exist
      */
     async getProductByManagementNumber(managementNumber: string): Promise<any | null> {
         try {
-            return await prisma.product.findUnique({
+            return await prisma.product.findFirst({
                 where: { managementNumber },
                 include: {
                     user: true
+                },
+                orderBy: {
+                    createdAt: 'desc'
                 }
             });
         } catch (error) {
@@ -276,21 +222,25 @@ export class ProductService {
 
     /**
      * Delete product by management number and associated images
+     * Deletes the most recently created product if multiple exist
      */
     async deleteProduct(managementNumber: string): Promise<any> {
         try {
-            // First, get the product to retrieve image filenames
-            const product = await prisma.product.findUnique({
-                where: { managementNumber }
+            // First, get the product to retrieve image filenames (most recent one)
+            const product = await prisma.product.findFirst({
+                where: { managementNumber },
+                orderBy: {
+                    createdAt: 'desc'
+                }
             });
 
             if (!product) {
                 throw new Error(`Product with management number ${managementNumber} not found`);
             }
 
-            // Delete the product from database
+            // Delete the product from database by id
             const deletedProduct = await prisma.product.delete({
-                where: { managementNumber }
+                where: { id: product.id }
             });
 
             // Delete associated image files
@@ -418,11 +368,15 @@ export class ProductService {
 
     /**
      * Select a title from candidate titles
+     * Updates the most recently created product if multiple exist
      */
     async selectTitleFromCandidates(managementNumber: string, selectedTitle: string): Promise<any> {
         try {
-            const product = await prisma.product.findUnique({
-                where: { managementNumber }
+            const product = await prisma.product.findFirst({
+                where: { managementNumber },
+                orderBy: {
+                    createdAt: 'desc'
+                }
             });
 
             if (!product) {
@@ -436,7 +390,7 @@ export class ProductService {
             }
 
             const updatedProduct = await prisma.product.update({
-                where: { managementNumber },
+                where: { id: product.id },
                 data: {
                     title: selectedTitle,
                     updatedAt: new Date()
@@ -452,11 +406,15 @@ export class ProductService {
 
     /**
      * Get candidate titles for a product
+     * Returns titles from the most recently created product if multiple exist
      */
     async getCandidateTitles(managementNumber: string): Promise<string[]> {
         try {
-            const product = await prisma.product.findUnique({
-                where: { managementNumber }
+            const product = await prisma.product.findFirst({
+                where: { managementNumber },
+                orderBy: {
+                    createdAt: 'desc'
+                }
             });
 
             if (!product) {
@@ -480,9 +438,12 @@ export class ProductService {
 
     async getCategoryList(productId: string): Promise<string[] | null> {
         try {
-            const product = await prisma.product.findUnique({
+            const product = await prisma.product.findFirst({
                 where: { managementNumber: productId },
-                select: { categoryList: true }
+                select: { categoryList: true },
+                orderBy: {
+                    createdAt: 'desc'
+                }
             });
 
             if (!product?.categoryList) {
@@ -511,10 +472,17 @@ export class ProductService {
                 throw new Error('Product ID is required');
             }
 
-            const product = await prisma.product.findUnique({
+            const product = await prisma.product.findFirst({
                 where: { managementNumber: productId },
-                select: { categoryList: true }
+                select: { id: true, categoryList: true },
+                orderBy: {
+                    createdAt: 'desc'
+                }
             });
+
+            if (!product) {
+                throw new Error(`Product with management number ${productId} not found`);
+            }
 
             console.log('product', product?.categoryList, level);
 
@@ -528,9 +496,9 @@ export class ProductService {
             if (!categoryList.includes(currentCategory)) {
                 categoryList.push(currentCategory);
 
-                // Update the product
+                // Update the product by id
                 await prisma.product.update({
-                    where: { managementNumber: productId },
+                    where: { id: product.id },
                     data: {
                         categoryList: JSON.stringify(categoryList)
                     }

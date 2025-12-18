@@ -15,7 +15,7 @@ datasource db {
 
 model Product {
   id               String   @id @default(cuid())
-  managementNumber String   @unique
+  managementNumber String
   title            String?
   candidateTitles  String   @default("[]") // JSON string for SQLite compatibility
   measurementType  String?  // JSON string for SQLite compatibility - stores {"foreign":"EUR 44", "japanese":"日本サイズ28.5cm"}
@@ -118,6 +118,5 @@ model Folder {
   user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   products                Product[]
   
-  @@unique([userId, foldername])
   @@map("folders")
 }

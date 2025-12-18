@@ -109,10 +109,10 @@ class BatchController {
                 return;
             }
 
-            // Create or get folder if folderName is provided
+            // Always create a new folder if folderName is provided
             let folderId: string | null = null;
             if (folderName && folderName.trim()) {
-                const folder = await folderService.createOrGetFolder({
+                const folder = await folderService.createFolder({
                     userId,
                     foldername: folderName.trim()
                 });
@@ -150,7 +150,6 @@ class BatchController {
                     uploadErrors: uploadErrors || [],
                     uploadSummary: {
                         newProducts: uploadSummary.newProducts,
-                        updatedProducts: uploadSummary.updatedProducts,
                         newImages: uploadSummary.newImages,
                         duplicateImages: uploadSummary.duplicateImages,
                         details: uploadSummary.details
